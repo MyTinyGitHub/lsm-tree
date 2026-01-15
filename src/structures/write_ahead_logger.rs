@@ -61,12 +61,12 @@ impl WriteAheadLogger {
         tree
     }
 
-    pub fn write(operation: Operations, key: &str, value: &str) -> Option<bool> {
+    pub fn write(operation: Operations, key: &str, value: &str, file: &str) -> Option<bool> {
         let mut file = OpenOptions::new()
             .read(true)
             .append(true)
             .create(true)
-            .open("data/wals/wal.txt")
+            .open(format!("data/wals/{}.txt", file))
             .ok()?;
 
         let version_formatted = format!("v{}|", WAL_VERSION);

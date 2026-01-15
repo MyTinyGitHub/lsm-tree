@@ -15,6 +15,7 @@ struct Lsm {
 #[derive(Debug)]
 struct Config {
     max_memtable_size: usize,
+    wal_index: usize,
 }
 
 impl Lsm {
@@ -24,12 +25,18 @@ impl Lsm {
             immutable_memtable: None,
             config: Config {
                 max_memtable_size: 10,
+                wal_index: 1,
             },
         }
     }
 
     fn add(&mut self, key: &str, value: &str) -> Result<(), ()> {
-        WriteAheadLogger::write(Operations::Put, key, value);
+        WriteAheadLogger::write(
+            Operations::Put,
+            key,
+            value,
+            &self.config.wal_index.to_string(),
+        );
 
         if self.memtable.as_ref().ok_or(())?.len() >= self.config.max_memtable_size {
             self.memtable_to_sstable();
@@ -44,7 +51,13 @@ impl Lsm {
      * Place a thombstone in the position of the key
      */
     fn delete(&mut self, key: &str) -> Result<(), ()> {
-        WriteAheadLogger::write(Operations::Delete, key, "");
+        WriteAheadLogger::write(
+            Operations::Delete,
+            key,
+            "",
+            &self.config.wal_index.to_string(),
+        );
+
         self.memtable.as_mut().ok_or(())?.delete(key);
 
         Ok(())
@@ -53,6 +66,8 @@ impl Lsm {
     fn memtable_to_sstable(&mut self) {
         self.immutable_memtable = self.memtable.take();
         self.memtable = Some(MemTable::new());
+        self.config.wal_index += 1;
+        self.immutable_memtable.take().unwrap().persist();
     }
 }
 
