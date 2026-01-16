@@ -2,6 +2,7 @@ use crate::structures::{
     memtable::MemTable,
     write_ahead_logger::{Operations, WriteAheadLogger},
 };
+use log::info;
 
 mod structures;
 
@@ -31,6 +32,7 @@ impl Lsm {
     }
 
     fn add(&mut self, key: &str, value: &str) -> Result<(), ()> {
+        info!("Adding an element with key:{} and value:{}", key, value);
         WriteAheadLogger::write(
             Operations::Put,
             key,
@@ -51,6 +53,8 @@ impl Lsm {
      * Place a thombstone in the position of the key
      */
     fn delete(&mut self, key: &str) -> Result<(), ()> {
+        info!("deleting a record with key {}", key);
+
         WriteAheadLogger::write(
             Operations::Delete,
             key,
@@ -64,17 +68,23 @@ impl Lsm {
     }
 
     fn memtable_to_sstable(&mut self) {
+        info!("persisting the memtable to file");
+
         self.immutable_memtable = self.memtable.take();
         self.memtable = Some(MemTable::new());
         self.config.wal_index += 1;
-        self.immutable_memtable.take().unwrap().persist();
+        let _ = self.immutable_memtable.take().unwrap().persist();
     }
 }
 
 fn main() {
+    log4rs::init_file("./src/config/log4rs.yaml", Default::default()).unwrap();
+    info!("application is starting");
+
     let mut lsm = Lsm::default();
     lsm.memtable = Some(WriteAheadLogger::read_from_file());
-    println!("after reading: {:?}", lsm);
+    WriteAheadLogger::list_files_sorted("data/wals");
+    info!("after startup {:?}", lsm);
 
     lsm.add("1", "test").unwrap();
     lsm.add("2", "test").unwrap();
@@ -92,6 +102,4 @@ fn main() {
 
     lsm.add("11", "test").unwrap();
     lsm.add("12", "test").unwrap();
-
-    println!("after done: {:?}", lsm);
 }

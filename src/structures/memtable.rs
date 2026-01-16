@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub struct MemTable {
-    tree: BTreeMap<String, Option<String>>,
+    pub tree: BTreeMap<String, Option<String>>,
 }
 
 impl MemTable {

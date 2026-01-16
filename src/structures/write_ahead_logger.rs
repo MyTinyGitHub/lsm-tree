@@ -1,12 +1,14 @@
 use crate::structures::memtable::MemTable;
-use std::fs;
+use log::info;
 use std::fs::OpenOptions;
+use std::fs::{self, DirEntry};
 use std::io::prelude::*;
 use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct WriteAheadLogger {}
 
+#[derive(Debug)]
 pub enum Operations {
     Put,
     Delete,
@@ -34,6 +36,21 @@ impl FromStr for Operations {
 const WAL_VERSION: u8 = 1;
 
 impl WriteAheadLogger {
+    pub fn list_files_sorted(path: &str) -> Result<(), ()> {
+        let mut entries = fs::read_dir(path)
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        entries.sort_by_key(|e| e.file_name());
+
+        let entry = entries.last().unwrap();
+
+        info!("{:?}", entry.file_name());
+
+        Ok(())
+    }
+
     pub fn read_from_file() -> MemTable {
         let mut tree = MemTable::new();
         let data = fs::read_to_string("data/wals/wal.txt");
@@ -62,6 +79,10 @@ impl WriteAheadLogger {
     }
 
     pub fn write(operation: Operations, key: &str, value: &str, file: &str) -> Option<bool> {
+        info!(
+            "writing to wal operation {:?} key {} value {}",
+            operation, key, value
+        );
         let mut file = OpenOptions::new()
             .read(true)
             .append(true)
