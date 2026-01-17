@@ -1,7 +1,7 @@
 use crate::structures::memtable::MemTable;
-use log::info;
+use log::{error, info};
+use std::fs;
 use std::fs::OpenOptions;
-use std::fs::{self};
 use std::io::prelude::*;
 use std::str::FromStr;
 
@@ -19,7 +19,7 @@ pub enum Operations {
 fn operation_value(operation: &Operations) -> String {
     match operation {
         Operations::Put => "PUT".to_owned(),
-        Operations::Delete => "PUT".to_owned(),
+        Operations::Delete => "DELETE".to_owned(),
     }
 }
 
@@ -58,7 +58,6 @@ impl WriteAheadLogger {
 
     pub fn read_from_file(path: &str) -> MemTable {
         let Ok(data) = fs::read_to_string(format!("data/wals/{}.txt", path)) else {
-            info!("Data inside a wal could not be read, defeulting to empty MemTable");
             return MemTable::new();
         };
 
@@ -67,14 +66,30 @@ impl WriteAheadLogger {
         data.split("\n")
             .take_while(|v| !v.is_empty())
             .for_each(|v| {
-                let split = v.split("|").collect::<Vec<&str>>();
+                let split = v.split("~").collect::<Vec<&str>>();
 
-                match Operations::from_str(split[1]).unwrap() {
+                let _ = split[0];
+                let checksum = split[1];
+                let Ok(operation) = Operations::from_str(split[2]) else {
+                    error!("Corrupted WAL Unable to read operation");
+                    return;
+                };
+                let key = split[3];
+                let value = split[4];
+
+                let calc_checksum = md5::compute(format!("{}~{}~", key, value));
+
+                if format!("{:x}", calc_checksum) != checksum {
+                    error!("Corrupted WAL Record mismatched checksum");
+                    return;
+                }
+
+                match operation {
                     Operations::Put => {
-                        tree.add(split[2], split[3]);
+                        tree.add(split[3], split[4]);
                     }
                     Operations::Delete => {
-                        tree.delete(split[2]);
+                        tree.delete(split[3]);
                     }
                 };
             });
@@ -87,6 +102,7 @@ impl WriteAheadLogger {
             "writing to wal operation {:?} key {} value {}",
             operation, key, value
         );
+
         let mut file = OpenOptions::new()
             .read(true)
             .append(true)
@@ -94,17 +110,21 @@ impl WriteAheadLogger {
             .open(format!("data/wals/{}.txt", file))
             .ok()?;
 
-        let version_formatted = format!("v{}|", WAL_VERSION);
-        let operation_formatted = format!("{}|", operation_value(&operation));
-        let formatted_key = format!("{}|", key);
+        let version_formatted = format!("v{}~", WAL_VERSION);
+        let operation_formatted = format!("{}~", operation_value(&operation));
+        let formatted_key = format!("{}~", key);
 
         let formatted_value = match &operation {
-            Operations::Put => format!("{}|", value),
-            Operations::Delete => "".to_owned(),
+            Operations::Put => format!("{}~", value),
+            Operations::Delete => "~".to_owned(),
         };
 
+        let checksum = md5::compute(format!("{}{}", formatted_key, formatted_value));
+
         file.write_all(version_formatted.as_bytes()).ok()?;
-        file.write_all(operation_formatted.as_bytes()).ok()?;
+        file.write_all(format!("{:x}", checksum).as_bytes()).ok()?;
+        file.write_all(b"~").ok()?;
+        file.write_all(operation_formatted.as_ref()).ok()?;
         file.write_all(formatted_key.as_bytes()).ok()?;
         file.write_all(formatted_value.as_bytes()).ok()?;
         file.write_all("\n".as_bytes()).ok()?;

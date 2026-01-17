@@ -82,6 +82,7 @@ impl Lsm {
         self.immutable_memtable = self.memtable.take();
         self.memtable = Some(MemTable::new());
         self.config.wal_index += 1;
+
         let _ = self.immutable_memtable.take().unwrap().persist();
     }
 }
@@ -106,6 +107,7 @@ fn main() {
     lsm.add("7", "test").unwrap();
     lsm.add("8", "test").unwrap();
     lsm.add("9", "test").unwrap();
+    lsm.delete("9").unwrap();
     lsm.add("10", "test").unwrap();
     lsm.add("11", "test").unwrap();
     lsm.add("22", "test").unwrap();

@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub struct MemTable {
@@ -31,7 +32,10 @@ impl MemTable {
             .read(true)
             .append(true)
             .create(true)
-            .open(format!("data/memtables/{}.txt", "1"))
+            .open(format!(
+                "data/sstables/{}.txt",
+                MemTable::get_timestamp_ms()
+            ))
             .ok()
             .ok_or(())?;
 
@@ -45,5 +49,11 @@ impl MemTable {
         });
 
         Ok(())
+    }
+    fn get_timestamp_ms() -> u128 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
     }
 }
