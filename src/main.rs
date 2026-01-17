@@ -1,10 +1,12 @@
+use std::fs::read;
+
 use crate::structures::{
-    key_cache::Cache,
+    cache::Cache,
     memtable::MemTable,
+    ss_table::SSTable,
     write_ahead_logger::{Operations, WriteAheadLogger},
 };
 use log::info;
-use log4rs::encode::Write;
 
 mod structures;
 
@@ -58,6 +60,33 @@ impl Lsm {
         Ok(())
     }
 
+    fn get(&self, key: &str) -> Option<String> {
+        if let Some(value) = self.memtable.as_ref().and_then(|v| v.get(key)) {
+            info!("value found in memtable key: {} value {:?}", key, value);
+            return value.clone();
+        }
+
+        if let Some(value) = self.key_cache.get(key) {
+            info!(
+                "Value found in cache, retrieve from ss_table file_name: {} start_offset: {} end_offset: {}",
+                value.file_name, value.offset_start, value.offset_end
+            );
+
+            let read_string = SSTable::read_from_file(
+                value.file_name.as_ref(),
+                value.offset_start,
+                value.offset_end,
+            );
+
+            return match read_string.as_str() {
+                "THOMBSTONE NONE" => None,
+                _ => Some(read_string),
+            };
+        }
+
+        None
+    }
+
     /*
      * Place a thombstone in the position of the key
      */
@@ -83,7 +112,7 @@ impl Lsm {
         self.memtable = Some(MemTable::new());
         self.config.wal_index += 1;
 
-        let _ = self.immutable_memtable.take().unwrap().persist();
+        let _ = SSTable::persist(self.immutable_memtable.take().unwrap(), &mut self.key_cache);
     }
 }
 
@@ -114,4 +143,13 @@ fn main() {
     lsm.add("33", "test").unwrap();
     lsm.add("44", "test").unwrap();
     lsm.add("55", "test").unwrap();
+
+    let val1 = lsm.get("55");
+    info!("Value1 is {:?}", val1);
+    let val2 = lsm.get("1");
+    info!("Value2 is {:?}", val2);
+    let val3 = lsm.get("abc");
+    info!("Value3 is {:?}", val3);
+    let val4 = lsm.get("9");
+    info!("Value4 is {:?}", val4);
 }

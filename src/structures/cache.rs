@@ -6,10 +6,10 @@ use std::fs;
 * Written to file as hash | key | offset_start | offset_end | file_name
 */
 #[derive(Debug)]
-struct CacheEntry {
-    offset_start: usize,
-    offset_end: usize,
-    file_name: String,
+pub struct CacheEntry {
+    pub offset_start: u64,
+    pub offset_end: u64,
+    pub file_name: String,
 }
 
 #[derive(Debug)]
@@ -19,12 +19,12 @@ struct CacheConfig {
 
 #[derive(Debug)]
 pub struct Cache {
-    data: HashMap<String, CacheEntry>,
+    pub data: HashMap<String, CacheEntry>,
     config: CacheConfig,
 }
 
 impl CacheEntry {
-    pub fn new(offset_start: usize, offset_end: usize, file_name: &str) -> Self {
+    pub fn new(offset_start: u64, offset_end: u64, file_name: &str) -> Self {
         Self {
             offset_start,
             offset_end,
@@ -61,12 +61,12 @@ impl Cache {
             .for_each(|v| {
                 let split = v.split("|").collect::<Vec<&str>>();
 
-                let Ok(offset_start) = split[2].parse::<usize>() else {
+                let Ok(offset_start) = split[2].parse::<u64>() else {
                     log::error!("Unable to parse values {:?}", split);
                     return;
                 };
 
-                let Ok(offset_end) = split[3].parse::<usize>() else {
+                let Ok(offset_end) = split[3].parse::<u64>() else {
                     log::error!("Unable to parse values {:?}", split);
                     return;
                 };
@@ -75,5 +75,16 @@ impl Cache {
 
                 self.data.insert(split[1].to_owned(), entry);
             });
+    }
+
+    pub fn add(&mut self, key: &str, start_pos: u64, end_pos: u64, file_name: &str) {
+        self.data.insert(
+            key.to_string(),
+            CacheEntry::new(start_pos, end_pos, file_name),
+        );
+    }
+
+    pub fn get(&self, key: &str) -> Option<&CacheEntry> {
+        self.data.get(key)
     }
 }

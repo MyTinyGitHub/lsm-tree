@@ -39,6 +39,7 @@ impl WriteAheadLogger {
     pub fn list_files_sorted(path: &str) -> Result<String, ()> {
         let mut entries = fs::read_dir(path)
             .unwrap()
+            .filter(|d| d.as_ref().unwrap().file_name() != ".gitkeep")
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
