@@ -1,9 +1,11 @@
 use crate::structures::memtable::MemTable;
 use log::info;
 use std::fs::OpenOptions;
-use std::fs::{self, DirEntry};
+use std::fs::{self};
 use std::io::prelude::*;
 use std::str::FromStr;
+
+const WAL_VERSION: u8 = 1;
 
 #[derive(Debug)]
 pub struct WriteAheadLogger {}
@@ -33,10 +35,8 @@ impl FromStr for Operations {
     }
 }
 
-const WAL_VERSION: u8 = 1;
-
 impl WriteAheadLogger {
-    pub fn list_files_sorted(path: &str) -> Result<(), ()> {
+    pub fn list_files_sorted(path: &str) -> Result<String, ()> {
         let mut entries = fs::read_dir(path)
             .unwrap()
             .collect::<Result<Vec<_>, _>>()
@@ -44,23 +44,27 @@ impl WriteAheadLogger {
 
         entries.sort_by_key(|e| e.file_name());
 
-        let entry = entries.last().unwrap();
+        let entry = entries.last().ok_or(())?;
 
         info!("{:?}", entry.file_name());
 
-        Ok(())
+        Ok(entry
+            .path()
+            .file_stem()
+            .ok_or(())?
+            .to_string_lossy()
+            .to_string())
     }
 
-    pub fn read_from_file() -> MemTable {
-        let mut tree = MemTable::new();
-        let data = fs::read_to_string("data/wals/wal.txt");
-
-        if data.is_err() {
+    pub fn read_from_file(path: &str) -> MemTable {
+        let Ok(data) = fs::read_to_string(format!("data/wals/{}.txt", path)) else {
+            info!("Data inside a wal could not be read, defeulting to empty MemTable");
             return MemTable::new();
-        }
+        };
 
-        data.unwrap()
-            .split("\n")
+        let mut tree = MemTable::new();
+
+        data.split("\n")
             .take_while(|v| !v.is_empty())
             .for_each(|v| {
                 let split = v.split("|").collect::<Vec<&str>>();

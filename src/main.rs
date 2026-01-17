@@ -1,8 +1,10 @@
 use crate::structures::{
+    key_cache::Cache,
     memtable::MemTable,
     write_ahead_logger::{Operations, WriteAheadLogger},
 };
 use log::info;
+use log4rs::encode::Write;
 
 mod structures;
 
@@ -10,6 +12,7 @@ mod structures;
 struct Lsm {
     memtable: Option<MemTable>,
     immutable_memtable: Option<MemTable>,
+    key_cache: Cache,
     config: Config,
 }
 
@@ -21,12 +24,18 @@ struct Config {
 
 impl Lsm {
     fn default() -> Self {
+        let wal_index = WriteAheadLogger::list_files_sorted("data/wals")
+            .unwrap_or("1".to_owned())
+            .parse::<usize>()
+            .expect("incorrect and unparsable WAL Index loaded from file");
+
         Self {
             memtable: Some(MemTable::new()),
             immutable_memtable: None,
+            key_cache: Cache::default(),
             config: Config {
                 max_memtable_size: 10,
-                wal_index: 1,
+                wal_index,
             },
         }
     }
@@ -82,8 +91,10 @@ fn main() {
     info!("application is starting");
 
     let mut lsm = Lsm::default();
-    lsm.memtable = Some(WriteAheadLogger::read_from_file());
-    WriteAheadLogger::list_files_sorted("data/wals");
+    lsm.memtable = Some(WriteAheadLogger::read_from_file(
+        &lsm.config.wal_index.to_string(),
+    ));
+
     info!("after startup {:?}", lsm);
 
     lsm.add("1", "test").unwrap();
@@ -92,14 +103,13 @@ fn main() {
     lsm.add("4", "test").unwrap();
     lsm.add("5", "test").unwrap();
     lsm.add("6", "test").unwrap();
-
-    lsm.delete("6").unwrap();
-
     lsm.add("7", "test").unwrap();
     lsm.add("8", "test").unwrap();
     lsm.add("9", "test").unwrap();
     lsm.add("10", "test").unwrap();
-
     lsm.add("11", "test").unwrap();
-    lsm.add("12", "test").unwrap();
+    lsm.add("22", "test").unwrap();
+    lsm.add("33", "test").unwrap();
+    lsm.add("44", "test").unwrap();
+    lsm.add("55", "test").unwrap();
 }
