@@ -1,28 +1,27 @@
-use crate::structures::{
-    cache::Cache,
-    memtable::MemTable,
-    ss_table::SSTable,
-    write_ahead_logger::{Operations, WriteAheadLogger},
+use crate::{
+    config::Config,
+    structures::{
+        cache::Cache,
+        memtable::MemTable,
+        ss_table::SSTable,
+        write_ahead_logger::{Operations, WriteAheadLogger},
+    },
 };
 
 use log::info;
-
-#[derive(Debug)]
-struct Config {
-    max_memtable_size: usize,
-    wal_index: usize,
-}
 
 #[derive(Debug)]
 pub struct Lsm {
     memtable: Option<MemTable>,
     immutable_memtable: Option<MemTable>,
     key_cache: Cache,
-    config: Config,
+    wal_index: usize,
+    wal_storage_location: String,
+    max_memtable_size: usize,
 }
 
 impl Lsm {
-    pub fn default() -> Self {
+    pub fn new(config: Config) -> Self {
         let wal_index = WriteAheadLogger::list_files_sorted("data/wals")
             .unwrap_or("1".to_owned())
             .parse::<usize>()
@@ -34,23 +33,22 @@ impl Lsm {
             memtable: Some(memtable),
             immutable_memtable: None,
             key_cache: Cache::default(),
-            config: Config {
-                max_memtable_size: 10,
-                wal_index,
-            },
+            wal_index,
+            max_memtable_size: config.memtable.max_entries,
+            wal_storage_location: config.directory.wal,
         }
+    }
+
+    fn wal_file_path(&self) -> String {
+        format!("{}{}.txt", self.wal_storage_location, self.wal_index)
     }
 
     pub fn add(&mut self, key: &str, value: &str) -> Result<(), ()> {
         info!("Adding an element with key:{} and value:{}", key, value);
-        WriteAheadLogger::write(
-            Operations::Put,
-            key,
-            value,
-            &self.config.wal_index.to_string(),
-        );
 
-        if self.memtable.as_ref().ok_or(())?.len() >= self.config.max_memtable_size {
+        WriteAheadLogger::write(Operations::Put, key, value, &self.wal_file_path());
+
+        if self.memtable.as_ref().ok_or(())?.len() >= self.max_memtable_size {
             self.memtable_to_sstable();
         }
 
@@ -92,12 +90,7 @@ impl Lsm {
     pub fn delete(&mut self, key: &str) -> Result<(), ()> {
         info!("deleting a record with key {}", key);
 
-        WriteAheadLogger::write(
-            Operations::Delete,
-            key,
-            "",
-            &self.config.wal_index.to_string(),
-        );
+        WriteAheadLogger::write(Operations::Delete, key, "", &self.wal_storage_location);
 
         self.memtable.as_mut().ok_or(())?.delete(key);
 
@@ -109,7 +102,7 @@ impl Lsm {
 
         self.immutable_memtable = self.memtable.take();
         self.memtable = Some(MemTable::new());
-        self.config.wal_index += 1;
+        self.wal_index += 1;
 
         let _ = SSTable::persist(self.immutable_memtable.take().unwrap(), &mut self.key_cache);
     }

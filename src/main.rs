@@ -1,13 +1,16 @@
-use crate::structures::lsm::Lsm;
+use crate::{config::Config, structures::lsm::Lsm};
 use log::info;
 
+mod config;
 mod structures;
 
 fn main() {
-    log4rs::init_file("./src/config/log4rs.yaml", Default::default()).unwrap();
+    let config = Config::default();
+
+    log4rs::init_file(&config.directory.log, Default::default()).unwrap();
     info!("application is starting");
 
-    let mut lsm = Lsm::default();
+    let mut lsm = Lsm::new(config);
 
     info!("after startup {:?}", lsm);
 

@@ -1,0 +1,5 @@
+[wal]
+version = 1
+
+[memtable]
+max_entries = 10
