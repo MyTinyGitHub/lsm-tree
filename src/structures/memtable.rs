@@ -1,9 +1,4 @@
 use std::collections::BTreeMap;
-use std::fs::OpenOptions;
-use std::io::prelude::*;
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use crate::structures::cache::Cache;
 
 #[derive(Debug)]
 pub struct MemTable {

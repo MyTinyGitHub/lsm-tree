@@ -19,7 +19,8 @@ impl SSTable {
         let value = String::from_utf8(buffer).unwrap();
 
         let split = value.split("~").last();
-        return split.unwrap().to_owned();
+
+        split.unwrap().to_owned()
     }
 
     pub fn persist(mem_table: MemTable, cache: &mut Cache) -> Result<(), ()> {
@@ -36,7 +37,7 @@ impl SSTable {
         mem_table.tree.iter().for_each(|e| {
             let value = match e.1 {
                 Some(v) => v,
-                None => "THOMBSTONE NONE",
+                None => "THOMBSTONE",
             };
 
             let start_position = file.stream_position().unwrap();
