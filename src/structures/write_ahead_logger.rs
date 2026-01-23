@@ -58,7 +58,7 @@ impl WriteAheadLogger {
     }
 
     pub fn read_from_file(path: &str) -> MemTable {
-        let Ok(data) = fs::read_to_string(format!("data/wals/{}.txt", path)) else {
+        let Ok(data) = fs::read_to_string(path) else {
             return MemTable::new();
         };
 
@@ -108,7 +108,7 @@ impl WriteAheadLogger {
             .read(true)
             .append(true)
             .create(true)
-            .open(format!("data/wals/{}.txt", file))
+            .open(file)
             .ok()?;
 
         let version_formatted = format!("v{}~", WAL_VERSION);

@@ -1,8 +1,8 @@
 use crate::structures::{cache::Cache, memtable::MemTable};
 
 use std::fs::{File, OpenOptions};
-use std::io::SeekFrom;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct SSTable {}
@@ -37,7 +37,7 @@ impl SSTable {
         mem_table.tree.iter().for_each(|e| {
             let value = match e.1 {
                 Some(v) => v,
-                None => "THOMBSTONE",
+                None => "TOMBSTONE",
             };
 
             let start_position = file.stream_position().unwrap();

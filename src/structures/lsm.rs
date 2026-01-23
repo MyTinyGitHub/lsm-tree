@@ -1,5 +1,6 @@
 use crate::{
     config::Config,
+    error::{LsmError, Result},
     structures::{
         cache::Cache,
         memtable::MemTable,
@@ -43,16 +44,26 @@ impl Lsm {
         format!("{}{}.txt", self.wal_storage_location, self.wal_index)
     }
 
-    pub fn add(&mut self, key: &str, value: &str) -> Result<(), ()> {
+    pub fn add(&mut self, key: &str, value: &str) -> Result<()> {
         info!("Adding an element with key:{} and value:{}", key, value);
 
-        WriteAheadLogger::write(Operations::Put, key, value, &self.wal_file_path());
+        WriteAheadLogger::write(Operations::Put, key, value, &self.wal_file_path())
+            .ok_or(LsmError::WalError("Failed to write to WAL".to_string()))?;
 
-        if self.memtable.as_ref().ok_or(())?.len() >= self.max_memtable_size {
-            self.memtable_to_sstable();
+        if self
+            .memtable
+            .as_ref()
+            .ok_or(LsmError::WalError("No active memtable".to_string()))?
+            .len()
+            >= self.max_memtable_size
+        {
+            self.memtable_to_sstable()?;
         }
 
-        self.memtable.as_mut().ok_or(())?.add(key, value);
+        self.memtable
+            .as_mut()
+            .ok_or(LsmError::WalError("No active memtable".to_string()))?
+            .add(key, value);
 
         Ok(())
     }
@@ -76,7 +87,7 @@ impl Lsm {
             );
 
             return match read_string.as_str() {
-                "THOMBSTONE" => None,
+                "TOMBSTONE" => None,
                 _ => Some(read_string),
             };
         }
@@ -87,23 +98,35 @@ impl Lsm {
     /*
      * Place a thombstone in the position of the key
      */
-    pub fn delete(&mut self, key: &str) -> Result<(), ()> {
+    pub fn delete(&mut self, key: &str) -> Result<()> {
         info!("deleting a record with key {}", key);
 
-        WriteAheadLogger::write(Operations::Delete, key, "", &self.wal_storage_location);
+        WriteAheadLogger::write(Operations::Delete, key, "", &self.wal_file_path())
+            .ok_or(LsmError::WalError("Failed to write to WAL".to_string()))?;
 
-        self.memtable.as_mut().ok_or(())?.delete(key);
+        self.memtable
+            .as_mut()
+            .ok_or(LsmError::WalError("No active memtable".to_string()))?
+            .delete(key);
 
         Ok(())
     }
 
-    pub fn memtable_to_sstable(&mut self) {
+    pub fn memtable_to_sstable(&mut self) -> Result<()> {
         info!("persisting the memtable to file");
 
         self.immutable_memtable = self.memtable.take();
         self.memtable = Some(MemTable::new());
         self.wal_index += 1;
 
-        let _ = SSTable::persist(self.immutable_memtable.take().unwrap(), &mut self.key_cache);
+        SSTable::persist(
+            self.immutable_memtable
+                .take()
+                .ok_or(LsmError::WalError("No immutable memtable".to_string()))?,
+            &mut self.key_cache,
+        )
+        .map_err(|_| LsmError::SsTableError("Failed to persist SSTable".to_string()))?;
+
+        Ok(())
     }
 }
