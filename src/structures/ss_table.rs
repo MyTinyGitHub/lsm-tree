@@ -23,7 +23,7 @@ impl SSTable {
 
         let split = value.split("~").last();
 
-        split.unwrap().to_owned()
+        split.unwrap().strip_suffix("\n").unwrap().to_owned()
     }
 
     pub fn persist(mem_table: Arc<MemTable>, cache: Arc<RwLock<Cache>>) -> Result<(), ()> {
@@ -47,7 +47,7 @@ impl SSTable {
             };
 
             let start_position = file.stream_position().unwrap();
-            let _ = file.write_all(format!("{}~{}", e.0, value).as_bytes());
+            let _ = file.write_all(format!("{}~{}\n", e.0, value).as_bytes());
             let end_position = file.stream_position().unwrap();
 
             cache

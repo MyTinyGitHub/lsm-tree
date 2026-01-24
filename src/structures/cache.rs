@@ -1,3 +1,4 @@
+use core::str;
 use std::collections::HashMap;
 use std::fs;
 
@@ -13,68 +14,37 @@ pub struct CacheEntry {
 }
 
 #[derive(Debug)]
-struct CacheConfig {
-    file_name: String,
-}
-
-#[derive(Debug)]
 pub struct Cache {
     pub data: HashMap<String, CacheEntry>,
-    config: CacheConfig,
+}
+
+impl Default for Cache {
+    fn default() -> Self {
+        Self {
+            data: HashMap::new(),
+        }
+    }
 }
 
 impl CacheEntry {
-    pub fn new(offset_start: u64, offset_end: u64, file_name: &str) -> Self {
+    pub fn new(start_pos: u64, end_pos: u64, file_name: &str) -> Self {
         Self {
-            offset_start,
-            offset_end,
+            offset_start: start_pos,
+            offset_end: end_pos,
             file_name: file_name.to_owned(),
         }
     }
 }
 
-impl Default for Cache {
-    fn default() -> Self {
-        let mut cache = Self {
-            data: HashMap::new(),
-            config: CacheConfig {
-                file_name: "/data/cache/entries.txt".to_owned(),
-            },
-        };
-
-        cache.read_from_file();
-        cache
-    }
-}
-
 impl Cache {
-    pub fn read_from_file(&mut self) {
-        let data = fs::read_to_string(&self.config.file_name);
+    pub fn read_on_startup(&mut self, path: String) {
+        let mut entries = fs::read_dir(path)
+            .unwrap()
+            .filter(|d| d.as_ref().unwrap().file_name() != ".gitkeep")
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
-        if data.is_err() {
-            return;
-        }
-
-        data.unwrap()
-            .split("\n")
-            .take_while(|v| !v.is_empty())
-            .for_each(|v| {
-                let split = v.split("|").collect::<Vec<&str>>();
-
-                let Ok(offset_start) = split[2].parse::<u64>() else {
-                    log::error!("Unable to parse values {:?}", split);
-                    return;
-                };
-
-                let Ok(offset_end) = split[3].parse::<u64>() else {
-                    log::error!("Unable to parse values {:?}", split);
-                    return;
-                };
-
-                let entry = CacheEntry::new(offset_start, offset_end, split[4]);
-
-                self.data.insert(split[1].to_owned(), entry);
-            });
+        entries.sort_by_key(|e| e.file_name());
     }
 
     pub fn add(&mut self, key: &str, start_pos: u64, end_pos: u64, file_name: &str) {

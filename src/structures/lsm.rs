@@ -5,7 +5,7 @@ use crate::{
     error::{LsmError, Result},
     structures::{
         cache::Cache,
-        memtable::{self, MemTable},
+        memtable::MemTable,
         ss_table::SSTable,
         write_ahead_logger::{Operations, WriteAheadLogger},
     },

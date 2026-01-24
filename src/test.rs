@@ -1,4 +1,23 @@
 use super::*;
+use crate::{
+    config::{Directories, MemTableConfig, WALConfig},
+    structures::lsm::Lsm,
+};
+
+impl Config {
+    pub fn test() -> Self {
+        Self {
+            wal: WALConfig { version: 1 },
+            memtable: MemTableConfig { max_entries: 5 },
+            directory: Directories {
+                log: "log/config/log4rs.yaml".to_owned(),
+                wal: "test-data/wals/".to_owned(),
+                ss_table: "test-data/ss_tables/".to_owned(),
+                cache: "test-data/cache".to_owned(),
+            },
+        }
+    }
+}
 
 #[tokio::test]
 pub async fn test() -> Result<()> {
