@@ -1,9 +1,11 @@
+use std::sync::{Arc, RwLock};
+
 use crate::{
     config::Config,
     error::{LsmError, Result},
     structures::{
         cache::Cache,
-        memtable::MemTable,
+        memtable::{self, MemTable},
         ss_table::SSTable,
         write_ahead_logger::{Operations, WriteAheadLogger},
     },
@@ -14,8 +16,8 @@ use log::info;
 #[derive(Debug)]
 pub struct Lsm {
     memtable: Option<MemTable>,
-    immutable_memtable: Option<MemTable>,
-    key_cache: Cache,
+    immutable_memtable: Option<Arc<MemTable>>,
+    key_cache: Arc<RwLock<Cache>>,
     wal_index: usize,
     wal_storage_location: String,
     max_memtable_size: usize,
@@ -33,7 +35,7 @@ impl Lsm {
         Self {
             memtable: Some(memtable),
             immutable_memtable: None,
-            key_cache: Cache::default(),
+            key_cache: Arc::new(RwLock::new(Cache::default())),
             wal_index,
             max_memtable_size: config.memtable.max_entries,
             wal_storage_location: config.directory.wal,
@@ -57,7 +59,11 @@ impl Lsm {
             .len()
             >= self.max_memtable_size
         {
-            self.memtable_to_sstable()?;
+            self.memtable_to_sstable();
+
+            let mem = Arc::clone(self.immutable_memtable.as_ref().unwrap());
+            let cache = Arc::clone(&self.key_cache);
+            tokio::task::spawn_blocking(move || Lsm::persist_immutable_memtable(mem, cache));
         }
 
         self.memtable
@@ -74,7 +80,15 @@ impl Lsm {
             return value.clone();
         }
 
-        if let Some(value) = self.key_cache.get(key) {
+        if let Some(value) = self.immutable_memtable.as_ref().and_then(|t| t.get(key)) {
+            info!(
+                "value found in immutable_memtable key: {} value {:?}",
+                key, value
+            );
+            return value.clone();
+        }
+
+        if let Some(value) = self.key_cache.read().unwrap().get(key) {
             info!(
                 "Value found in cache, retrieve from ss_table file_name: {} start_offset: {} end_offset: {}",
                 value.file_name, value.offset_start, value.offset_end
@@ -112,21 +126,20 @@ impl Lsm {
         Ok(())
     }
 
-    pub fn memtable_to_sstable(&mut self) -> Result<()> {
+    fn memtable_to_sstable(&mut self) {
         info!("persisting the memtable to file");
 
-        self.immutable_memtable = self.memtable.take();
+        self.immutable_memtable = Some(Arc::new(self.memtable.take().unwrap()));
         self.memtable = Some(MemTable::new());
         self.wal_index += 1;
+    }
 
-        SSTable::persist(
-            self.immutable_memtable
-                .take()
-                .ok_or(LsmError::WalError("No immutable memtable".to_string()))?,
-            &mut self.key_cache,
-        )
-        .map_err(|_| LsmError::SsTableError("Failed to persist SSTable".to_string()))?;
-
+    fn persist_immutable_memtable(
+        memtable: Arc<MemTable>,
+        cache: Arc<RwLock<Cache>>,
+    ) -> Result<()> {
+        let _ = SSTable::persist(memtable, cache)
+            .map_err(|_| LsmError::SsTableError("Failed to persist SSTable".to_string()))?;
         Ok(())
     }
 }

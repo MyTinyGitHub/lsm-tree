@@ -1,8 +1,11 @@
+use log::info;
+
 use crate::structures::{cache::Cache, memtable::MemTable};
 
 use std::fs::{File, OpenOptions};
-use std::io::prelude::*;
 use std::io::SeekFrom;
+use std::io::prelude::*;
+use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct SSTable {}
@@ -23,8 +26,10 @@ impl SSTable {
         split.unwrap().to_owned()
     }
 
-    pub fn persist(mem_table: MemTable, cache: &mut Cache) -> Result<(), ()> {
+    pub fn persist(mem_table: Arc<MemTable>, cache: Arc<RwLock<Cache>>) -> Result<(), ()> {
         let file_name = format!("data/sstables/{}.txt", SSTable::get_timestamp_ms());
+
+        info!("writing to a file {}", file_name);
 
         let mut file = OpenOptions::new()
             .read(true)
@@ -34,6 +39,7 @@ impl SSTable {
             .ok()
             .ok_or(())?;
 
+        info!("updating cache with a file {} ", file_name);
         mem_table.tree.iter().for_each(|e| {
             let value = match e.1 {
                 Some(v) => v,
@@ -44,7 +50,10 @@ impl SSTable {
             let _ = file.write_all(format!("{}~{}", e.0, value).as_bytes());
             let end_position = file.stream_position().unwrap();
 
-            cache.add(e.0, start_position, end_position, &file_name);
+            cache
+                .write()
+                .unwrap()
+                .add(e.0, start_position, end_position, &file_name);
         });
 
         Ok(())

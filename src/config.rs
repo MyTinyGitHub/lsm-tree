@@ -23,7 +23,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             wal: WALConfig { version: 1 },
-            memtable: MemTableConfig { max_entries: 10 },
+            memtable: MemTableConfig { max_entries: 5 },
             directory: Directories {
                 log: "log/config/log4rs.yaml".to_owned(),
                 wal: "data/wals/".to_owned(),
