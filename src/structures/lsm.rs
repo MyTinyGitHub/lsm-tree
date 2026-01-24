@@ -7,7 +7,7 @@ use crate::{
         cache::Cache,
         memtable::MemTable,
         ss_table::SSTable,
-        write_ahead_logger::{Operations, WriteAheadLogger},
+        write_ahead_logger::{self, Operations, WriteAheadLogger},
     },
 };
 
@@ -18,46 +18,31 @@ pub struct Lsm {
     memtable: Option<MemTable>,
     immutable_memtable: Option<Arc<MemTable>>,
     key_cache: Arc<RwLock<Cache>>,
-    wal_index: usize,
-    wal_storage_location: String,
-    max_memtable_size: usize,
 }
 
 impl Lsm {
-    pub fn new(config: Config) -> Self {
-        let wal_index = WriteAheadLogger::list_files_sorted("data/wals")
-            .unwrap_or("1".to_owned())
-            .parse::<usize>()
-            .expect("incorrect and unparsable WAL Index loaded from file");
-
-        let memtable = WriteAheadLogger::read_from_file(&wal_index.to_string());
+    pub fn new() -> Self {
+        let memtable = WriteAheadLogger::read_from_file();
 
         Self {
             memtable: Some(memtable),
             immutable_memtable: None,
             key_cache: Arc::new(RwLock::new(Cache::default())),
-            wal_index,
-            max_memtable_size: config.memtable.max_entries,
-            wal_storage_location: config.directory.wal,
         }
-    }
-
-    fn wal_file_path(&self) -> String {
-        format!("{}{}.txt", self.wal_storage_location, self.wal_index)
     }
 
     pub fn add(&mut self, key: &str, value: &str) -> Result<()> {
         info!("Adding an element with key:{} and value:{}", key, value);
 
-        WriteAheadLogger::write(Operations::Put, key, value, &self.wal_file_path())
-            .ok_or(LsmError::WalError("Failed to write to WAL".to_string()))?;
+        WriteAheadLogger::write(Operations::Put, key, value)
+            .ok_or(LsmError::Wal("Failed to write to WAL".to_string()))?;
 
         if self
             .memtable
             .as_ref()
-            .ok_or(LsmError::WalError("No active memtable".to_string()))?
+            .ok_or(LsmError::Wal("No active memtable".to_string()))?
             .len()
-            >= self.max_memtable_size
+            >= Config::global().memtable.max_entries
         {
             self.memtable_to_sstable();
 
@@ -68,7 +53,7 @@ impl Lsm {
 
         self.memtable
             .as_mut()
-            .ok_or(LsmError::WalError("No active memtable".to_string()))?
+            .ok_or(LsmError::Wal("No active memtable".to_string()))?
             .add(key, value);
 
         Ok(())
@@ -115,12 +100,12 @@ impl Lsm {
     pub fn delete(&mut self, key: &str) -> Result<()> {
         info!("deleting a record with key {}", key);
 
-        WriteAheadLogger::write(Operations::Delete, key, "", &self.wal_file_path())
-            .ok_or(LsmError::WalError("Failed to write to WAL".to_string()))?;
+        WriteAheadLogger::write(Operations::Delete, key, "")
+            .ok_or(LsmError::Wal("Failed to write to WAL".to_string()))?;
 
         self.memtable
             .as_mut()
-            .ok_or(LsmError::WalError("No active memtable".to_string()))?
+            .ok_or(LsmError::Wal("No active memtable".to_string()))?
             .delete(key);
 
         Ok(())
@@ -131,7 +116,7 @@ impl Lsm {
 
         self.immutable_memtable = Some(Arc::new(self.memtable.take().unwrap()));
         self.memtable = Some(MemTable::new());
-        self.wal_index += 1;
+        write_ahead_logger::increment_index();
     }
 
     fn persist_immutable_memtable(
@@ -139,7 +124,7 @@ impl Lsm {
         cache: Arc<RwLock<Cache>>,
     ) -> Result<()> {
         let _ = SSTable::persist(memtable, cache)
-            .map_err(|_| LsmError::SsTableError("Failed to persist SSTable".to_string()))?;
+            .map_err(|_| LsmError::SsTable("Failed to persist SSTable".to_string()))?;
         Ok(())
     }
 }

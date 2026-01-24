@@ -13,7 +13,6 @@ impl Config {
                 log: "log/config/log4rs.yaml".to_owned(),
                 wal: "test-data/wals/".to_owned(),
                 ss_table: "test-data/ss_tables/".to_owned(),
-                cache: "test-data/cache".to_owned(),
             },
         }
     }
@@ -21,13 +20,13 @@ impl Config {
 
 #[tokio::test]
 pub async fn test() -> Result<()> {
-    let config = Config::test();
+    let config = Config::inject(Config::test());
 
     log4rs::init_file(&config.directory.log, Default::default())
-        .map_err(|e| crate::error::LsmError::LogError(e.to_string()))?;
+        .map_err(|e| crate::error::LsmError::Log(e.to_string()))?;
     info!("application is starting");
 
-    let mut lsm = Lsm::new(config);
+    let mut lsm = Lsm::new();
 
     info!("after startup {:?}", lsm);
 

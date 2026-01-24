@@ -1,0 +1,10 @@
+[wal]
+version = 1
+
+[memtable]
+max_entries = 5
+
+[directory]
+wal = "data/wals"
+ss_table = "data/sstables"
+log = "log/config/log4rs.yaml"

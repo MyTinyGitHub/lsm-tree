@@ -10,13 +10,13 @@ mod test;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config = Config::default();
+    let config = Config::global();
 
     log4rs::init_file(&config.directory.log, Default::default())
-        .map_err(|e| crate::error::LsmError::LogError(e.to_string()))?;
+        .map_err(|e| crate::error::LsmError::Log(e.to_string()))?;
     info!("application is starting");
 
-    let mut lsm = Lsm::new(config);
+    let mut lsm = Lsm::new();
 
     lsm.add("1", "1")?;
     lsm.add("2", "2")?;
@@ -25,6 +25,10 @@ async fn main() -> Result<()> {
     lsm.add("5", "5")?;
     lsm.add("6", "6")?;
     lsm.add("7", "7")?;
+
+    lsm.get("7");
+    lsm.delete("7")?;
+    lsm.get("7");
 
     Ok(())
 }

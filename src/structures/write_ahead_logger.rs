@@ -1,11 +1,11 @@
+use crate::config::Config;
 use crate::structures::memtable::MemTable;
 use log::{error, info};
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::str::FromStr;
-
-const WAL_VERSION: u8 = 1;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug)]
 pub struct WriteAheadLogger {}
@@ -14,6 +14,33 @@ pub struct WriteAheadLogger {}
 pub enum Operations {
     Put,
     Delete,
+}
+
+static WAL_INDEX: AtomicUsize = AtomicUsize::new(0);
+
+fn init_index() -> usize {
+    let file_name: String = WriteAheadLogger::list_latest().unwrap_or_else(|_| "1".to_owned());
+
+    WAL_INDEX.store(
+        file_name
+            .parse::<usize>()
+            .expect("unable to parse initial WAL Index"),
+        Ordering::SeqCst,
+    );
+
+    WAL_INDEX.load(Ordering::SeqCst)
+}
+
+pub fn increment_index() -> usize {
+    WAL_INDEX.fetch_add(1, Ordering::SeqCst)
+}
+
+pub fn index() -> usize {
+    WAL_INDEX.load(Ordering::SeqCst)
+}
+
+fn wal_file_path() -> String {
+    format!("{}/{}.txt", Config::global().directory.wal, index())
 }
 
 fn operation_value(operation: &Operations) -> String {
@@ -36,8 +63,10 @@ impl FromStr for Operations {
 }
 
 impl WriteAheadLogger {
-    pub fn list_files_sorted(path: &str) -> Result<String, ()> {
-        let mut entries = fs::read_dir(path)
+    pub fn list_latest() -> Result<String, ()> {
+        let file_path = &Config::global().directory.wal;
+
+        let mut entries = fs::read_dir(file_path)
             .unwrap()
             .filter(|d| d.as_ref().unwrap().file_name() != ".gitkeep")
             .collect::<Result<Vec<_>, _>>()
@@ -57,8 +86,9 @@ impl WriteAheadLogger {
             .to_string())
     }
 
-    pub fn read_from_file(path: &str) -> MemTable {
-        let Ok(data) = fs::read_to_string(path) else {
+    pub fn read_from_file() -> MemTable {
+        init_index();
+        let Ok(data) = fs::read_to_string(wal_file_path()) else {
             return MemTable::new();
         };
 
@@ -98,20 +128,22 @@ impl WriteAheadLogger {
         tree
     }
 
-    pub fn write(operation: Operations, key: &str, value: &str, file: &str) -> Option<bool> {
+    pub fn write(operation: Operations, key: &str, value: &str) -> Option<bool> {
         info!(
             "writing to wal operation {:?} key {} value {}",
             operation, key, value
         );
 
+        let file_name = wal_file_path();
+
         let mut file = OpenOptions::new()
             .read(true)
             .append(true)
             .create(true)
-            .open(file)
+            .open(file_name)
             .ok()?;
 
-        let version_formatted = format!("v{}~", WAL_VERSION);
+        let version_formatted = format!("v{}~", Config::global().wal.version);
         let operation_formatted = format!("{}~", operation_value(&operation));
         let formatted_key = format!("{}~", key);
 

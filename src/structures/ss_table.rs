@@ -1,5 +1,6 @@
 use log::info;
 
+use crate::config::Config;
 use crate::structures::{cache::Cache, memtable::MemTable};
 
 use std::fs::{File, OpenOptions};
@@ -27,7 +28,11 @@ impl SSTable {
     }
 
     pub fn persist(mem_table: Arc<MemTable>, cache: Arc<RwLock<Cache>>) -> Result<(), ()> {
-        let file_name = format!("data/sstables/{}.txt", SSTable::get_timestamp_ms());
+        let file_name = format!(
+            "{}/{}.txt",
+            Config::global().directory.ss_table,
+            SSTable::get_timestamp_ms()
+        );
 
         info!("writing to a file {}", file_name);
 
