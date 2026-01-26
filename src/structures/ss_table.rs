@@ -3,8 +3,7 @@ use log::info;
 use crate::config::Config;
 use crate::structures::{cache::Cache, memtable::MemTable};
 
-use std::fs::{File, OpenOptions};
-use std::io::SeekFrom;
+use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -12,19 +11,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct SSTable {}
 
 impl SSTable {
-    pub fn read_from_file(file_name: &str, start_pos: u64, end_pos: u64) -> String {
-        let mut file = File::open(file_name).unwrap();
-        let length = end_pos - start_pos;
-        let mut buffer = vec![0u8; length as usize];
+    pub fn read_from_file(file_name: &str, key: &str) -> Option<String> {
+        let data =
+            fs::read_to_string(file_name).expect(&format!("Error reading from file {}", file_name));
 
-        file.seek(SeekFrom::Start(start_pos)).unwrap();
-        file.read_exact(&mut buffer).unwrap();
-
-        let value = String::from_utf8(buffer).unwrap();
-
-        let split = value.split("~").last();
-
-        split.unwrap().strip_suffix("\n").unwrap().to_owned()
+        data.split("\n")
+            .skip(1)
+            .find(|row| row.split("~").collect::<Vec<&str>>()[0] == key)
+            .map(|row| row.split("~").collect::<Vec<&str>>()[1].to_owned())
     }
 
     pub fn persist(mem_table: Arc<MemTable>, cache: Arc<RwLock<Cache>>) -> Result<(), ()> {
@@ -44,6 +38,9 @@ impl SSTable {
             .ok()
             .ok_or(())?;
 
+        let _ = file.write_all(mem_table.bloom_filter.persist_value().as_bytes());
+        let _ = file.write_all("\n".as_bytes());
+
         info!("updating cache with a file {} ", file_name);
         mem_table.tree.iter().for_each(|e| {
             let value = match e.1 {
@@ -51,14 +48,12 @@ impl SSTable {
                 None => "TOMBSTONE",
             };
 
-            let start_position = file.stream_position().unwrap();
             let _ = file.write_all(format!("{}~{}\n", e.0, value).as_bytes());
-            let end_position = file.stream_position().unwrap();
 
             cache
                 .write()
                 .unwrap()
-                .add(e.0, start_position, end_position, &file_name);
+                .add(&file_name, mem_table.bloom_filter.clone());
         });
 
         Ok(())

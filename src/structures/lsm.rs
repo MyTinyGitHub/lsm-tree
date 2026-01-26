@@ -73,25 +73,29 @@ impl Lsm {
             return value.clone();
         }
 
-        if let Some(value) = self.key_cache.read().unwrap().get(key) {
+        info!("key {} not found in memtable or immutable_memtable", key);
+
+        let cache = self.key_cache.read().unwrap();
+        let mut files = cache.get(key).clone();
+
+        info!("files found containsing the key {:?}", files);
+
+        files.sort();
+        files.reverse();
+
+        let result = files.iter().find_map(|file_name| {
             info!(
-                "Value found in cache, retrieve from ss_table file_name: {} start_offset: {} end_offset: {}",
-                value.file_name, value.offset_start, value.offset_end
+                "Value found in cache, retrieve from ss_table file_name: {}",
+                file_name
             );
 
-            let read_string = SSTable::read_from_file(
-                value.file_name.as_ref(),
-                value.offset_start,
-                value.offset_end,
-            );
+            SSTable::read_from_file(file_name, key)
+        })?;
 
-            return match read_string.as_str() {
-                "TOMBSTONE" => None,
-                _ => Some(read_string),
-            };
+        match result.as_str() {
+            "TOMBSTONE" => None,
+            _ => Some(result),
         }
-
-        None
     }
 
     /*

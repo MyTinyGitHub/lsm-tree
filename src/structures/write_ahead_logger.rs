@@ -1,4 +1,6 @@
 use crate::config::Config;
+use crate::error::LsmError;
+use crate::structures::lsm::Lsm;
 use crate::structures::memtable::MemTable;
 use log::{error, info};
 use std::fs;
@@ -67,7 +69,7 @@ impl WriteAheadLogger {
         let file_path = &Config::global().directory.wal;
 
         let mut entries = fs::read_dir(file_path)
-            .unwrap()
+            .map_err(|_| ())?
             .filter(|d| d.as_ref().unwrap().file_name() != ".gitkeep")
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
@@ -136,12 +138,16 @@ impl WriteAheadLogger {
 
         let file_name = wal_file_path();
 
+        info!("reading file {}", &file_name);
+
         let mut file = OpenOptions::new()
             .read(true)
             .append(true)
             .create(true)
-            .open(file_name)
+            .open(&file_name)
             .ok()?;
+
+        info!("file {} openned", &file_name);
 
         let version_formatted = format!("v{}~", Config::global().wal.version);
         let operation_formatted = format!("{}~", operation_value(&operation));

@@ -1,0 +1,125 @@
+
+running 1 test
+2026-01-26T20:56:38.345675618+01:00 INFO lsm_tree::test - application is starting
+2026-01-26T20:56:38.345895889+01:00 INFO lsm_tree::structures::write_ahead_logger - "9.txt"
+2026-01-26T20:56:38.346029430+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test14
+2026-01-26T20:56:38.346102855+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test15
+2026-01-26T20:56:38.346171302+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test1
+2026-01-26T20:56:38.346234704+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test2
+2026-01-26T20:56:38.346298241+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test3
+2026-01-26T20:56:38.346359205+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test4
+2026-01-26T20:56:38.346412529+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test1
+2026-01-26T20:56:38.346486112+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test1
+2026-01-26T20:56:38.346536250+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test1
+2026-01-26T20:56:38.346590478+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test1
+2026-01-26T20:56:38.346672375+01:00 INFO lsm_tree::test - after startup Lsm { memtable: Some(MemTable { tree: {"1": Some("test1"), "14": Some("test14"), "15": Some("test15"), "2": Some("test2"), "3": Some("test3"), "4": Some("test4")}, bloom_filter: BloomFilter { value: [0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1], size: 15 } }), immutable_memtable: None, key_cache: RwLock { data: Cache { data: {} }, poisoned: false, .. } }
+2026-01-26T20:56:38.346800524+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:1 and value:test1
+2026-01-26T20:56:38.346867997+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 1 value test1
+2026-01-26T20:56:38.346956020+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/9.txt
+2026-01-26T20:56:38.347044806+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/9.txt openned
+2026-01-26T20:56:38.347266319+01:00 INFO lsm_tree::structures::lsm - persisting the memtable to file
+2026-01-26T20:56:38.347786313+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test1
+2026-01-26T20:56:38.347927878+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:2 and value:test2
+2026-01-26T20:56:38.348020548+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 2 value test2
+2026-01-26T20:56:38.348108461+01:00 INFO lsm_tree::structures::ss_table - writing to a file test-data/ss_tables/1769457398347.txt
+2026-01-26T20:56:38.348498886+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/10.txt
+2026-01-26T20:56:38.348640973+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/10.txt openned
+2026-01-26T20:56:38.348814890+01:00 INFO lsm_tree::structures::ss_table - updating cache with a file test-data/ss_tables/1769457398347.txt 
+2026-01-26T20:56:38.349035678+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test2
+2026-01-26T20:56:38.349131241+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:3 and value:test3
+2026-01-26T20:56:38.349200759+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 3 value test3
+2026-01-26T20:56:38.349278477+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/10.txt
+2026-01-26T20:56:38.349378094+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/10.txt openned
+2026-01-26T20:56:38.349637315+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test3
+2026-01-26T20:56:38.349708478+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:4 and value:test4
+2026-01-26T20:56:38.349766655+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 4 value test4
+2026-01-26T20:56:38.349847114+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/10.txt
+2026-01-26T20:56:38.349944565+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/10.txt openned
+2026-01-26T20:56:38.350156641+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test4
+2026-01-26T20:56:38.350234843+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:5 and value:test5
+2026-01-26T20:56:38.350285693+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 5 value test5
+2026-01-26T20:56:38.350346782+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/10.txt
+2026-01-26T20:56:38.350422946+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/10.txt openned
+2026-01-26T20:56:38.350703019+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test5
+2026-01-26T20:56:38.350790285+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:6 and value:test6
+2026-01-26T20:56:38.350862899+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 6 value test6
+2026-01-26T20:56:38.350928843+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/10.txt
+2026-01-26T20:56:38.350992587+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/10.txt openned
+2026-01-26T20:56:38.351150292+01:00 INFO lsm_tree::structures::lsm - persisting the memtable to file
+2026-01-26T20:56:38.351291098+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test6
+2026-01-26T20:56:38.351348575+01:00 INFO lsm_tree::structures::ss_table - writing to a file test-data/ss_tables/1769457398351.txt
+2026-01-26T20:56:38.351479987+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:7 and value:test7
+2026-01-26T20:56:38.351560130+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 7 value test7
+2026-01-26T20:56:38.351622803+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/11.txt
+2026-01-26T20:56:38.351701556+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/11.txt openned
+2026-01-26T20:56:38.351814729+01:00 INFO lsm_tree::structures::ss_table - updating cache with a file test-data/ss_tables/1769457398351.txt 
+2026-01-26T20:56:38.351927854+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test7
+2026-01-26T20:56:38.352010004+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:8 and value:test8
+2026-01-26T20:56:38.352081362+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 8 value test8
+2026-01-26T20:56:38.352154248+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/11.txt
+2026-01-26T20:56:38.352246602+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/11.txt openned
+2026-01-26T20:56:38.352492617+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test8
+2026-01-26T20:56:38.352578449+01:00 INFO lsm_tree::structures::lsm - deleting a record with key 2
+2026-01-26T20:56:38.352648374+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Delete key 2 value 
+2026-01-26T20:56:38.352716225+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/11.txt
+2026-01-26T20:56:38.352802915+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/11.txt openned
+2026-01-26T20:56:38.353023044+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:10 and value:test10
+2026-01-26T20:56:38.353092169+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 10 value test10
+2026-01-26T20:56:38.353149272+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/11.txt
+2026-01-26T20:56:38.353237900+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/11.txt openned
+2026-01-26T20:56:38.353531185+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test10
+2026-01-26T20:56:38.353626997+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:11 and value:test11
+2026-01-26T20:56:38.353703337+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 11 value test11
+2026-01-26T20:56:38.353781938+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/11.txt
+2026-01-26T20:56:38.353871822+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/11.txt openned
+2026-01-26T20:56:38.354130569+01:00 INFO lsm_tree::structures::lsm - persisting the memtable to file
+2026-01-26T20:56:38.354244616+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test11
+2026-01-26T20:56:38.354293279+01:00 INFO lsm_tree::structures::ss_table - writing to a file test-data/ss_tables/1769457398354.txt
+2026-01-26T20:56:38.354412407+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:12 and value:test12
+2026-01-26T20:56:38.354520052+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 12 value test12
+2026-01-26T20:56:38.354601527+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/12.txt
+2026-01-26T20:56:38.354684727+01:00 INFO lsm_tree::structures::ss_table - updating cache with a file test-data/ss_tables/1769457398354.txt 
+2026-01-26T20:56:38.354784117+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/12.txt openned
+2026-01-26T20:56:38.355116082+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test12
+2026-01-26T20:56:38.355231292+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:13 and value:test13
+2026-01-26T20:56:38.355307520+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 13 value test13
+2026-01-26T20:56:38.355388971+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/12.txt
+2026-01-26T20:56:38.355541029+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/12.txt openned
+2026-01-26T20:56:38.355844083+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test13
+2026-01-26T20:56:38.355954042+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:14 and value:test14
+2026-01-26T20:56:38.356023946+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 14 value test14
+2026-01-26T20:56:38.356113234+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/12.txt
+2026-01-26T20:56:38.356219143+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/12.txt openned
+2026-01-26T20:56:38.356450140+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test14
+2026-01-26T20:56:38.356563747+01:00 INFO lsm_tree::structures::lsm - Adding an element with key:15 and value:test15
+2026-01-26T20:56:38.356625777+01:00 INFO lsm_tree::structures::write_ahead_logger - writing to wal operation Put key 15 value test15
+2026-01-26T20:56:38.356693088+01:00 INFO lsm_tree::structures::write_ahead_logger - reading file test-data/wals/12.txt
+2026-01-26T20:56:38.356782622+01:00 INFO lsm_tree::structures::write_ahead_logger - file test-data/wals/12.txt openned
+2026-01-26T20:56:38.357007414+01:00 INFO lsm_tree::structures::bloom_filter - updating the bloomfilter with key test15
+2026-01-26T20:56:38.357101772+01:00 INFO lsm_tree::test - lsm after inserting the values Lsm { memtable: Some(MemTable { tree: {"11": Some("test11"), "12": Some("test12"), "13": Some("test13"), "14": Some("test14"), "15": Some("test15")}, bloom_filter: BloomFilter { value: [0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1], size: 15 } }), immutable_memtable: Some(MemTable { tree: {"10": Some("test10"), "2": None, "6": Some("test6"), "7": Some("test7"), "8": Some("test8")}, bloom_filter: BloomFilter { value: [0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0], size: 15 } }), key_cache: RwLock { data: Cache { data: {"test-data/ss_tables/1769457398347.txt": BloomFilter { value: [0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1], size: 15 }, "test-data/ss_tables/1769457398354.txt": BloomFilter { value: [0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0], size: 15 }, "test-data/ss_tables/1769457398351.txt": BloomFilter { value: [1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1], size: 15 }} }, poisoned: false, .. } }
+2026-01-26T20:56:38.357274495+01:00 INFO lsm_tree::structures::lsm - key 1 not found in memtable or immutable_memtable
+2026-01-26T20:56:38.357365715+01:00 INFO lsm_tree::structures::bloom_filter - searching the bloomfilter for key 1
+2026-01-26T20:56:38.357443309+01:00 INFO lsm_tree::structures::bloom_filter - false
+2026-01-26T20:56:38.357533791+01:00 INFO lsm_tree::structures::bloom_filter - searching the bloomfilter for key 1
+2026-01-26T20:56:38.357621205+01:00 INFO lsm_tree::structures::bloom_filter - false
+2026-01-26T20:56:38.357690700+01:00 INFO lsm_tree::structures::bloom_filter - searching the bloomfilter for key 1
+2026-01-26T20:56:38.357763642+01:00 INFO lsm_tree::structures::bloom_filter - false
+2026-01-26T20:56:38.357831611+01:00 INFO lsm_tree::structures::lsm - files found containsing the key []
+test test::test ... FAILED
+
+failures:
+
+---- test::test stdout ----
+
+thread 'test::test' (39036) panicked at src/test.rs:54:5:
+assertion `left == right` failed
+  left: None
+ right: Some("test1")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test::test
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

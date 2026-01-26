@@ -1,3 +1,4 @@
+pub mod bloom_filter;
 pub mod cache;
 pub mod lsm;
 pub mod memtable;

@@ -11,8 +11,8 @@ impl Config {
             memtable: MemTableConfig { max_entries: 5 },
             directory: Directories {
                 log: "log/config/log4rs.yaml".to_owned(),
-                wal: "test-data/wals/".to_owned(),
-                ss_table: "test-data/ss_tables/".to_owned(),
+                wal: "test-data/wals".to_owned(),
+                ss_table: "test-data/ss_tables".to_owned(),
             },
         }
     }
@@ -47,6 +47,8 @@ pub async fn test() -> Result<()> {
     lsm.add("13", "test13")?;
     lsm.add("14", "test14")?;
     lsm.add("15", "test15")?;
+
+    info!("lsm after inserting the values {:?}", lsm);
 
     let val1 = lsm.get("1");
     assert_eq!(val1, Some("test1".to_owned()));
