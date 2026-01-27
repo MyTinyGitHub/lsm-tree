@@ -1,6 +1,4 @@
 use crate::config::Config;
-use crate::error::LsmError;
-use crate::structures::lsm::Lsm;
 use crate::structures::memtable::MemTable;
 use log::{error, info};
 use std::fs;

@@ -32,8 +32,4 @@ impl MemTable {
     pub fn len(&self) -> usize {
         self.tree.len()
     }
-
-    pub fn contains(&self, value: &str) -> bool {
-        self.bloom_filter.contains(value)
-    }
 }

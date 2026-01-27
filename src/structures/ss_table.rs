@@ -1,27 +1,15 @@
 use log::info;
-use log4rs::append::file;
 
 use crate::config::Config;
 use crate::structures::cache::IndexRecord;
 use crate::structures::{cache::Cache, memtable::MemTable};
 
-use std::collections::HashMap;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct SSTable {}
-
-pub struct SSTableFooter {
-    bloom_filter_offset: u64,
-    bloom_filter_data: u64,
-    index_offset: u64,
-    index_size: u64,
-    version: u32,
-    checksum: u32,
-    magic_number: u64,
-}
 
 impl SSTable {
     pub fn read_from_file(
@@ -78,7 +66,7 @@ impl SSTable {
         let mut index_end_key: &str = "";
 
         for (index, (key, value)) in mem_table.tree.iter().enumerate() {
-            if index != 0 && index % 5 == 0 {
+            if index != 0 && index % Config::global().cache.index_size == 0 {
                 indexes.push(IndexRecord {
                     start: index_key.to_owned(),
                     end: index_end_key.to_owned(),
@@ -87,7 +75,7 @@ impl SSTable {
                 });
             }
 
-            if index % 5 == 0 {
+            if index % Config::global().cache.index_size == 0 {
                 index_offset = file.stream_position().unwrap();
                 index_key = key;
             }

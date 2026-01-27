@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    config::{Directories, MemTableConfig, WALConfig},
+    config::{CacheConfig, Directories, MemTableConfig, WALConfig},
     structures::lsm::Lsm,
 };
 
@@ -14,6 +14,7 @@ impl Config {
                 wal: "test-data/wals".to_owned(),
                 ss_table: "test-data/ss_tables".to_owned(),
             },
+            cache: CacheConfig { index_size: 2 },
         }
     }
 }
@@ -50,20 +51,23 @@ pub async fn test() -> Result<()> {
 
     info!("lsm after inserting the values {:?}", lsm);
 
-    let val1 = lsm.get("1");
-    assert_eq!(val1, Some("test1".to_owned()));
+    let val = lsm.get("1");
+    assert_eq!(val, Some("test1".to_owned()));
 
-    let val2 = lsm.get("6");
-    assert_eq!(val2, Some("test6".to_owned()));
+    let val = lsm.get("4");
+    assert_eq!(val, Some("test4".to_owned()));
 
-    let val3 = lsm.get("13");
-    assert_eq!(val3, Some("test13".to_owned()));
+    let val = lsm.get("6");
+    assert_eq!(val, Some("test6".to_owned()));
 
-    let val4 = lsm.get("2");
-    assert_eq!(val4, None);
+    let val = lsm.get("13");
+    assert_eq!(val, Some("test13".to_owned()));
 
-    let val5 = lsm.get("abc");
-    assert_eq!(val5, None);
+    let val = lsm.get("2");
+    assert_eq!(val, None);
+
+    let val = lsm.get("abc");
+    assert_eq!(val, None);
 
     Ok(())
 }

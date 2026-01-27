@@ -7,6 +7,7 @@ pub struct Config {
     pub wal: WALConfig,
     pub memtable: MemTableConfig,
     pub directory: Directories,
+    pub cache: CacheConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -17,6 +18,11 @@ pub struct MemTableConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct WALConfig {
     pub version: usize,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CacheConfig {
+    pub index_size: usize,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -38,6 +44,7 @@ impl Default for Config {
                 wal: "data/wals/".to_owned(),
                 ss_table: "data/ss_tables/".to_owned(),
             },
+            cache: CacheConfig { index_size: 5 },
         }
     }
 }

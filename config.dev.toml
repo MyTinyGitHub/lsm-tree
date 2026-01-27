@@ -8,3 +8,6 @@ max_entries = 10
 wal = "data/wals"
 ss_table = "data/sstables"
 log = "log/config/log4rs.yaml"
+
+[cache]
+index_size = 5

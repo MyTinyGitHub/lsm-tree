@@ -129,7 +129,7 @@ impl Lsm {
         memtable: Arc<MemTable>,
         cache: Arc<RwLock<Cache>>,
     ) -> Result<()> {
-        let _ = SSTable::persist(memtable, cache)
+        SSTable::persist(memtable, cache)
             .map_err(|_| LsmError::SsTable("Failed to persist SSTable".to_string()))?;
         Ok(())
     }
