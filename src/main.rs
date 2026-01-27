@@ -25,6 +25,15 @@ async fn main() -> Result<()> {
     lsm.add("5", "5")?;
     lsm.add("6", "6")?;
     lsm.add("7", "7")?;
+    lsm.add("8", "8")?;
+    lsm.add("9", "9")?;
+    lsm.add("10", "10")?;
+    lsm.add("11", "11")?;
+    lsm.add("12", "12")?;
+    lsm.add("13", "13")?;
+    lsm.add("14", "14")?;
+    lsm.add("15", "15")?;
+    lsm.add("16", "16")?;
 
     lsm.get("7");
     lsm.delete("7")?;

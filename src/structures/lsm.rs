@@ -89,7 +89,9 @@ impl Lsm {
                 file_name
             );
 
-            SSTable::read_from_file(file_name, key)
+            let seek = cache.seek_position(file_name, key)?;
+
+            SSTable::read_from_file(file_name, key, seek)
         })?;
 
         match result.as_str() {
