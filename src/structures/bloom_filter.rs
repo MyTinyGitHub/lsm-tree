@@ -13,6 +13,18 @@ impl BloomFilter {
             size,
         }
     }
+    pub fn from_string(input: &str) -> Self {
+        info!("{}", input);
+        let mut value = vec![];
+
+        input
+            .strip_suffix("\n")
+            .unwrap()
+            .split(",")
+            .for_each(|v| value.push(v.parse().expect("unable to parse bloomfilter")));
+
+        Self { value, size: 15 }
+    }
 
     pub fn persist_value(&self) -> String {
         self.value

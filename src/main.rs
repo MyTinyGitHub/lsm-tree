@@ -17,6 +17,7 @@ async fn main() -> Result<()> {
     info!("application is starting");
 
     let mut lsm = Lsm::new();
+    info!("{:?}", lsm);
 
     lsm.add("1", "1")?;
     lsm.add("2", "2")?;

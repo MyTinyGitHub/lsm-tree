@@ -27,7 +27,7 @@ impl Lsm {
         Self {
             memtable: Some(memtable),
             immutable_memtable: None,
-            key_cache: Arc::new(RwLock::new(Cache::default())),
+            key_cache: Arc::new(RwLock::new(Cache::new())),
         }
     }
 

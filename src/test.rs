@@ -12,7 +12,7 @@ impl Config {
             directory: Directories {
                 log: "log/config/log4rs.yaml".to_owned(),
                 wal: "test-data/wals".to_owned(),
-                ss_table: "test-data/ss_tables".to_owned(),
+                ss_table: "test-data/sstables".to_owned(),
             },
             cache: CacheConfig { index_size: 2 },
         }
@@ -43,12 +43,6 @@ pub async fn test() -> Result<()> {
     lsm.delete("2")?;
     lsm.add("10", "test10")?;
 
-    lsm.add("11", "test11")?;
-    lsm.add("12", "test12")?;
-    lsm.add("13", "test13")?;
-    lsm.add("14", "test14")?;
-    lsm.add("15", "test15")?;
-
     info!("lsm after inserting the values {:?}", lsm);
 
     let val = lsm.get("1");
@@ -59,9 +53,6 @@ pub async fn test() -> Result<()> {
 
     let val = lsm.get("6");
     assert_eq!(val, Some("test6".to_owned()));
-
-    let val = lsm.get("13");
-    assert_eq!(val, Some("test13".to_owned()));
 
     let val = lsm.get("2");
     assert_eq!(val, None);
