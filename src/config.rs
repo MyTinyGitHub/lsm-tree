@@ -9,11 +9,17 @@ pub struct Config {
     pub memtable: MemTableConfig,
     pub directory: Directories,
     pub cache: CacheConfig,
+    pub ss_table: SSTableConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct MemTableConfig {
     pub max_entries: usize,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SSTableConfig {
+    pub manifest_location: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

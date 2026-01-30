@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 use crate::structures::cache::IndexRecord;
+use crate::structures::manifest::Manifest;
 use crate::structures::{cache::Cache, memtable::MemTable};
 
 use std::fs::{File, OpenOptions};
@@ -10,7 +11,10 @@ use std::io::prelude::*;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub struct SSTable {}
+#[derive(Debug)]
+pub struct SSTableManager {
+    manifest: Arc<RwLock<Manifest>>,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct SSTableFooter {
@@ -20,8 +24,13 @@ pub struct SSTableFooter {
     pub index_size: u64,
 }
 
-impl SSTable {
+impl SSTableManager {
+    pub fn new(manifest: Arc<RwLock<Manifest>>) -> Self {
+        Self { manifest }
+    }
+
     pub fn read_from_file(
+        &self,
         file_name: &str,
         key: &str,
         (offset, size): (u64, u64),
@@ -47,11 +56,11 @@ impl SSTable {
         })
     }
 
-    pub fn persist(mem_table: Arc<MemTable>, cache: Arc<RwLock<Cache>>) -> Result<(), ()> {
+    pub fn persist(&self, mem_table: Arc<MemTable>, cache: Arc<RwLock<Cache>>) -> Result<(), ()> {
         let file_name = format!(
             "{}/{}.txt",
             Config::global().directory.ss_table,
-            SSTable::get_timestamp_ms()
+            SSTableManager::get_timestamp_ms()
         );
 
         info!("writing to a file {}", file_name);

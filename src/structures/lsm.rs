@@ -5,8 +5,9 @@ use crate::{
     error::{LsmError, Result},
     structures::{
         cache::Cache,
+        manifest::Manifest,
         memtable::MemTable,
-        ss_table::SSTable,
+        ss_table_manager::{self, SSTableManager},
         write_ahead_logger::{self, Operations, WriteAheadLogger},
     },
 };
@@ -17,17 +18,20 @@ use log::info;
 pub struct Lsm {
     memtable: Option<MemTable>,
     immutable_memtable: Option<Arc<MemTable>>,
-    key_cache: Arc<RwLock<Cache>>,
+    cache: Arc<RwLock<Cache>>,
+    ss_table_manager: Arc<RwLock<SSTableManager>>,
 }
 
 impl Default for Lsm {
     fn default() -> Self {
         let memtable = WriteAheadLogger::read_from_file();
+        let manifest = Arc::new(RwLock::new(Manifest::new()));
 
         Self {
             memtable: Some(memtable),
             immutable_memtable: None,
-            key_cache: Arc::new(RwLock::new(Cache::new())),
+            cache: Arc::new(RwLock::new(Cache::new())),
+            ss_table_manager: Arc::new(RwLock::new(SSTableManager::new(Arc::clone(&manifest)))),
         }
     }
 }
@@ -49,8 +53,11 @@ impl Lsm {
             self.memtable_to_sstable();
 
             let mem = Arc::clone(self.immutable_memtable.as_ref().unwrap());
-            let cache = Arc::clone(&self.key_cache);
-            tokio::task::spawn_blocking(move || Lsm::persist_immutable_memtable(mem, cache));
+            let cache = Arc::clone(&self.cache);
+            let manager = Arc::clone(&self.ss_table_manager);
+            tokio::task::spawn_blocking(move || {
+                Lsm::persist_immutable_memtable(mem, cache, manager)
+            });
         }
 
         self.memtable
@@ -62,22 +69,25 @@ impl Lsm {
     }
 
     pub fn get(&self, key: &str) -> Option<String> {
-        if let Some(value) = self.memtable.as_ref().and_then(|v| v.get(key)) {
+        if let Some(value) = self.memtable.as_ref().and_then(|m: &MemTable| m.get(key)) {
             info!("value found in memtable key: {} value {:?}", key, value);
             return value.clone();
         }
 
-        if let Some(value) = self.immutable_memtable.as_ref().and_then(|t| t.get(key)) {
+        if let Some(value) = self.immutable_memtable.as_ref().and_then(|m| m.get(key)) {
             info!(
                 "value found in immutable_memtable key: {} value {:?}",
                 key, value
             );
+
             return value.clone();
         }
 
         info!("key {} not found in memtable or immutable_memtable", key);
 
-        let cache = self.key_cache.read().unwrap();
+        //ss_table_manager.retrieve(key);
+
+        let cache = self.cache.read().unwrap();
         let mut files = cache.get(key).clone();
 
         info!("files found containsing the key {:?}", files);
@@ -85,7 +95,7 @@ impl Lsm {
         files.sort();
         files.reverse();
 
-        let result = files.iter().find_map(|file_name| {
+        files.iter().find_map(|file_name| {
             info!(
                 "Value found in cache, retrieve from ss_table file_name: {}",
                 file_name
@@ -93,13 +103,11 @@ impl Lsm {
 
             let seek = cache.seek_position(file_name, key)?;
 
-            SSTable::read_from_file(file_name, key, seek)
-        })?;
-
-        match result.as_str() {
-            "TOMBSTONE" => None,
-            _ => Some(result),
-        }
+            self.ss_table_manager
+                .read()
+                .expect("Something went teribly wrong")
+                .read_from_file(file_name, key, seek)
+        })
     }
 
     /*
@@ -130,9 +138,14 @@ impl Lsm {
     fn persist_immutable_memtable(
         memtable: Arc<MemTable>,
         cache: Arc<RwLock<Cache>>,
+        manager: Arc<RwLock<SSTableManager>>,
     ) -> Result<()> {
-        SSTable::persist(memtable, cache)
+        manager
+            .read()
+            .expect("Somethink went wrong unable to get read lock")
+            .persist(memtable, cache)
             .map_err(|_| LsmError::SsTable("Failed to persist SSTable".to_string()))?;
+
         Ok(())
     }
 }

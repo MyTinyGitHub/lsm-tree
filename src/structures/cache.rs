@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 use crate::structures::bloom_filter::BloomFilter;
-use crate::structures::ss_table::SSTableFooter;
+use crate::structures::ss_table_manager::SSTableFooter;
 
 #[derive(Debug, Default)]
 pub struct Cache {
