@@ -13,7 +13,7 @@ use crate::{
 
 use log::info;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Lsm {
     memtable: Option<MemTable>,
     immutable_memtable: Option<Arc<MemTable>>,
@@ -21,16 +21,6 @@ pub struct Lsm {
 }
 
 impl Lsm {
-    pub fn new() -> Self {
-        let memtable = WriteAheadLogger::read_from_file();
-
-        Self {
-            memtable: Some(memtable),
-            immutable_memtable: None,
-            key_cache: Arc::new(RwLock::new(Cache::new())),
-        }
-    }
-
     pub fn add(&mut self, key: &str, value: &str) -> Result<()> {
         info!("Adding an element with key:{} and value:{}", key, value);
 
@@ -121,7 +111,7 @@ impl Lsm {
         info!("persisting the memtable to file");
 
         self.immutable_memtable = Some(Arc::new(self.memtable.take().unwrap()));
-        self.memtable = Some(MemTable::new());
+        self.memtable = Some(MemTable::default());
         write_ahead_logger::increment_index();
     }
 

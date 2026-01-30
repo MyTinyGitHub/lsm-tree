@@ -2,20 +2,13 @@ use std::collections::BTreeMap;
 
 use crate::structures::bloom_filter::BloomFilter;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MemTable {
     pub tree: BTreeMap<String, Option<String>>,
     pub bloom_filter: BloomFilter,
 }
 
 impl MemTable {
-    pub fn new() -> Self {
-        Self {
-            tree: BTreeMap::new(),
-            bloom_filter: BloomFilter::new(15),
-        }
-    }
-
     pub fn delete(&mut self, key: &str) {
         self.tree.insert(key.to_owned(), None);
     }

@@ -23,6 +23,7 @@ pub struct WALConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct CacheConfig {
     pub index_size: usize,
+    pub bloom_filter_size: usize,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -44,7 +45,10 @@ impl Default for Config {
                 wal: "data/wals/".to_owned(),
                 ss_table: "data/ss_tables/".to_owned(),
             },
-            cache: CacheConfig { index_size: 5 },
+            cache: CacheConfig {
+                index_size: 5,
+                bloom_filter_size: 50,
+            },
         }
     }
 }

@@ -1,18 +1,25 @@
 use log::info;
 
+use crate::config::Config;
+
 #[derive(Clone, Debug)]
 pub struct BloomFilter {
     value: Vec<usize>,
     size: usize,
 }
 
-impl BloomFilter {
-    pub fn new(size: usize) -> Self {
+impl Default for BloomFilter {
+    fn default() -> Self {
+        let size = Config::global().cache.bloom_filter_size;
+
         Self {
             value: vec![0; size],
             size,
         }
     }
+}
+
+impl BloomFilter {
     pub fn from_string(input: &str) -> Self {
         info!("{}", input);
         let mut value = vec![];
@@ -23,7 +30,8 @@ impl BloomFilter {
             .split(",")
             .for_each(|v| value.push(v.parse().expect("unable to parse bloomfilter")));
 
-        Self { value, size: 15 }
+        let size = Config::global().cache.bloom_filter_size;
+        Self { value, size }
     }
 
     pub fn persist_value(&self) -> String {

@@ -89,10 +89,10 @@ impl WriteAheadLogger {
     pub fn read_from_file() -> MemTable {
         init_index();
         let Ok(data) = fs::read_to_string(wal_file_path()) else {
-            return MemTable::new();
+            return MemTable::default();
         };
 
-        let mut tree = MemTable::new();
+        let mut tree = MemTable::default();
 
         data.split("\n")
             .take_while(|v| !v.is_empty())

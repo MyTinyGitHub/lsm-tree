@@ -9,7 +9,7 @@ pub async fn test() -> Result<(), ()> {
         .map_err(|e| LsmError::Log(e.to_string()));
     info!("application is starting");
 
-    let mut lsm = Lsm::new();
+    let mut lsm = Lsm::default();
 
     info!("after startup {:?}", lsm);
 

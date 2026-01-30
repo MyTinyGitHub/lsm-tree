@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
         .map_err(|e| crate::error::LsmError::Log(e.to_string()))?;
     info!("application is starting");
 
-    let mut lsm = Lsm::new();
+    let mut lsm = Lsm::default();
     info!("{:?}", lsm);
 
     lsm.add("1", "1")?;
