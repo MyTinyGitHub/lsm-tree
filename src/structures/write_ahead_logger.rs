@@ -50,7 +50,7 @@ pub fn index() -> usize {
 }
 
 fn wal_file_path() -> String {
-    format!("{}/{}.txt", Config::global().directory.wal, index())
+    format!("{}/{:010}.txt", Config::global().directory.wal, index())
 }
 
 fn operation_value(operation: &Operations) -> String {

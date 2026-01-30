@@ -12,3 +12,6 @@ log = "log/config/log4rs.yaml"
 [cache]
 index_size = 5
 bloom_filter_size = 50
+
+[ss_table]
+manifest_location = "./manifest.json"

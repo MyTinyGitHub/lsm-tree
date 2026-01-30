@@ -57,11 +57,7 @@ impl SSTableManager {
     }
 
     pub fn persist(&self, mem_table: Arc<MemTable>, cache: Arc<RwLock<Cache>>) -> Result<(), ()> {
-        let file_name = format!(
-            "{}/{}.txt",
-            Config::global().directory.ss_table,
-            SSTableManager::get_timestamp_ms()
-        );
+        let file_name = self.manifest.write().unwrap().create_level_0_filename();
 
         info!("writing to a file {}", file_name);
 
