@@ -6,7 +6,7 @@ max_entries = 10
 
 [directory]
 wal = "data/wals"
-ss_table = "data/sstables"
+ss_table = "data/ss_tables"
 log = "log/config/log4rs.yaml"
 
 [cache]

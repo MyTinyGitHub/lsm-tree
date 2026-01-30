@@ -57,14 +57,13 @@ impl Config {
         let content = fs::read_to_string(file_name)?;
         let config: Config = toml::from_str(&content)?;
 
+        let _ = fs::create_dir_all(&config.directory.wal);
+        let _ = fs::create_dir_all(&config.directory.ss_table);
+
         Ok(config)
     }
 
     pub fn global() -> &'static Config {
         CONFIG.get_or_init(|| Self::load().expect("Failed to load config"))
-    }
-
-    pub fn inject(config: Config) -> &'static Config {
-        CONFIG.get_or_init(|| config)
     }
 }
