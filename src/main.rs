@@ -5,9 +5,6 @@ mod config;
 mod error;
 mod structures;
 
-#[cfg(test)]
-mod test;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = Config::global();

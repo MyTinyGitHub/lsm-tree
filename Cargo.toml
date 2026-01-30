@@ -1,7 +1,11 @@
 [package]
-name = "lsm-tree"
+name = "lsm_tree"
 version = "0.1.0"
 edition = "2024"
+
+[[bin]]
+name = "lsm_tree"
+path = "src/main.rs"
 
 [dependencies]
 tokio = { version = "1.49.0", features = ["full"] }

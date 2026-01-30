@@ -1,5 +1,5 @@
 use core::str;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
 
@@ -10,8 +10,8 @@ use crate::structures::bloom_filter::BloomFilter;
 
 #[derive(Debug, Default)]
 pub struct Cache {
-    pub bloom_filters: HashMap<String, BloomFilter>,
-    pub indexes: HashMap<String, Vec<IndexRecord>>,
+    pub bloom_filters: BTreeMap<String, BloomFilter>,
+    pub indexes: BTreeMap<String, Vec<IndexRecord>>,
 }
 
 #[derive(Debug, Default)]
