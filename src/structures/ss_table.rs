@@ -1,4 +1,5 @@
 use log::info;
+use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 use crate::structures::cache::IndexRecord;
@@ -10,6 +11,14 @@ use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct SSTable {}
+
+#[derive(Serialize, Deserialize)]
+pub struct SSTableFooter {
+    pub bloom_filter_offset: u64,
+    pub bloom_filter_size: u64,
+    pub index_offset: u64,
+    pub index_size: u64,
+}
 
 impl SSTable {
     pub fn read_from_file(
@@ -29,15 +38,12 @@ impl SSTable {
 
         let _ = file.read_exact(&mut buffer);
 
-        let data = String::from_utf8(buffer).unwrap();
-
-        data.split("\n").find_map(|row| {
-            let split_row = row.split("~").collect::<Vec<&str>>();
-            if split_row[0] != key {
-                return None;
+        let values: Vec<(&str, Option<&str>)> = bincode::deserialize(&buffer).unwrap();
+        values.iter().find_map(|(k, v)| {
+            if *k == key {
+                return v.map(|v2| v2.to_owned());
             }
-
-            Some(split_row[1].to_owned())
+            None
         })
     }
 
@@ -64,15 +70,23 @@ impl SSTable {
         let mut index_offset = 0;
         let mut index_key: &str = "";
         let mut index_end_key: &str = "";
+        let mut vect: Vec<(&str, Option<&str>)> = Vec::new();
 
         for (index, (key, value)) in mem_table.tree.iter().enumerate() {
             if index != 0 && index % Config::global().cache.index_size == 0 {
+                info!("Persisting vect:{:?}", vect);
+
+                let bytes = bincode::serialize(&vect).unwrap();
+                let _ = file.write_all(&bytes);
+
                 indexes.push(IndexRecord {
                     start: index_key.to_owned(),
                     end: index_end_key.to_owned(),
                     offset: index_offset,
-                    size: file.stream_position().unwrap() - index_offset,
+                    size: bytes.len() as u64,
                 });
+
+                vect = Vec::new();
             }
 
             if index % Config::global().cache.index_size == 0 {
@@ -80,47 +94,44 @@ impl SSTable {
                 index_key = key;
             }
 
-            let value = value.as_deref().unwrap_or("TOMBSTONE");
-            let key_value = format!("{}~{}\n", key, value);
-            let _ = file.write_all(key_value.as_bytes());
-
             index_end_key = key;
+            vect.push((key, value.as_deref()));
         }
+
+        info!("Persisted vect:{:?}", vect);
+
+        let bytes = bincode::serialize(&vect).unwrap();
+        let _ = file.write_all(&bytes);
 
         indexes.push(IndexRecord {
             start: index_key.to_owned(),
             end: index_end_key.to_owned(),
             offset: index_offset,
-            size: file.stream_position().unwrap() - index_offset,
+            size: bytes.len() as u64,
         });
 
         info!("indexes to write {:?}", indexes);
 
-        let _ = file.write_all("\n".as_bytes());
-
-        let bloom_filter = mem_table.bloom_filter.persist_value() + "\n";
+        let bloom_filter = bincode::serialize(&mem_table.bloom_filter).unwrap();
         let bloom_filter_offset = file.stream_position().unwrap();
         let bloom_filter_size = bloom_filter.len() as u64;
 
-        let _ = file.write_all(bloom_filter.as_bytes());
+        let _ = file.write_all(&bloom_filter);
 
         let index_offset = file.stream_position().unwrap();
 
-        let mut index_formatted = "".to_owned();
-        for index_record in indexes.iter() {
-            index_formatted.push_str(&format!(
-                "{}~{}~{}~{}\n",
-                &index_record.start, &index_record.end, index_record.offset, index_record.size
-            ));
-        }
+        let index_bytes = bincode::serialize(&indexes).unwrap();
+        let _ = file.write_all(&index_bytes);
 
-        let index_size = index_formatted.len() as u64;
-        let _ = file.write_all(index_formatted.as_bytes());
+        let footer = SSTableFooter {
+            bloom_filter_offset,
+            bloom_filter_size,
+            index_offset,
+            index_size: index_bytes.len() as u64,
+        };
 
-        let _ = file.write_all(&bloom_filter_offset.to_le_bytes());
-        let _ = file.write_all(&bloom_filter_size.to_le_bytes());
-        let _ = file.write_all(&index_offset.to_le_bytes());
-        let _ = file.write_all(&index_size.to_le_bytes());
+        let footer_bytes = bincode::serialize(&footer).unwrap();
+        let _ = file.write_all(&footer_bytes);
 
         cache
             .write()

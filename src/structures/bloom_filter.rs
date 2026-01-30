@@ -1,8 +1,9 @@
 use log::info;
+use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BloomFilter {
     value: Vec<usize>,
     size: usize,
@@ -20,20 +21,6 @@ impl Default for BloomFilter {
 }
 
 impl BloomFilter {
-    pub fn from_string(input: &str) -> Self {
-        info!("{}", input);
-        let mut value = vec![];
-
-        input
-            .strip_suffix("\n")
-            .unwrap()
-            .split(",")
-            .for_each(|v| value.push(v.parse().expect("unable to parse bloomfilter")));
-
-        let size = Config::global().cache.bloom_filter_size;
-        Self { value, size }
-    }
-
     pub fn persist_value(&self) -> String {
         self.value
             .iter()

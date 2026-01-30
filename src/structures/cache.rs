@@ -4,9 +4,11 @@ use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
 
 use log::info;
+use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 use crate::structures::bloom_filter::BloomFilter;
+use crate::structures::ss_table::SSTableFooter;
 
 #[derive(Debug, Default)]
 pub struct Cache {
@@ -14,7 +16,7 @@ pub struct Cache {
     pub indexes: BTreeMap<String, Vec<IndexRecord>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct IndexRecord {
     pub start: String,
     pub end: String,
@@ -65,23 +67,20 @@ impl Cache {
                 .read_exact(&mut buffer)
                 .expect("Unable to read the file");
 
-            let bloom_filter_offset = u64::from_le_bytes(buffer[0..8].try_into().unwrap());
-            let bloom_filter_size = u64::from_le_bytes(buffer[8..16].try_into().unwrap());
-            let index_offset = u64::from_le_bytes(buffer[16..24].try_into().unwrap());
-            let index_size = u64::from_le_bytes(buffer[24..32].try_into().unwrap());
+            let footer: SSTableFooter = bincode::deserialize(&buffer).unwrap();
 
             self.read_indexes_from_file(
                 &mut opened,
                 file.path().to_str().unwrap().to_string(),
-                index_offset,
-                index_size,
+                footer.index_offset,
+                footer.index_size,
             );
 
             self.read_bloom_filter_from_file(
                 &mut opened,
                 file.path().to_str().unwrap().to_string(),
-                bloom_filter_offset,
-                bloom_filter_size,
+                footer.bloom_filter_offset,
+                footer.bloom_filter_size,
             );
         }
     }
@@ -100,17 +99,9 @@ impl Cache {
         file.read_exact(&mut buffer)
             .expect("Unable to read the file");
 
-        let mut index_vector: Vec<IndexRecord> = Vec::new();
+        let index_vector: Vec<IndexRecord> = bincode::deserialize(&buffer).unwrap();
 
-        String::from_utf8(buffer)
-            .expect("Unable to parse index")
-            .strip_suffix("\n")
-            .expect("Unable to strip suffix")
-            .split("\n")
-            .for_each(|v| {
-                let index_record = IndexRecord::from_string(v);
-                index_vector.push(index_record);
-            });
+        info!("read index vector: {:?}", index_vector);
 
         self.indexes.insert(file_name, index_vector);
     }
@@ -129,9 +120,10 @@ impl Cache {
         file.read_exact(&mut buffer)
             .expect("Unable to read the file");
 
-        let bloom_filter = String::from_utf8(buffer).expect("Unable to parse bloom filter");
-        self.bloom_filters
-            .insert(file_name, BloomFilter::from_string(&bloom_filter));
+        info!("bloomfilter offset {} size {}", offset, size);
+
+        let bloom_filter: BloomFilter = bincode::deserialize(&buffer).unwrap();
+        self.bloom_filters.insert(file_name, bloom_filter);
     }
 
     pub fn add(
