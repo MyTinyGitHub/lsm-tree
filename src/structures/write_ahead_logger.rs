@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::error::LsmError;
 use crate::structures::memtable::MemTable;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -53,13 +54,6 @@ fn wal_file_path() -> String {
     format!("{}/{:010}.txt", Config::global().directory.wal, index())
 }
 
-fn operation_value(operation: &Operations) -> String {
-    match operation {
-        Operations::Put => "PUT".to_owned(),
-        Operations::Delete => "DELETE".to_owned(),
-    }
-}
-
 impl FromStr for Operations {
     type Err = ();
 
@@ -73,25 +67,29 @@ impl FromStr for Operations {
 }
 
 impl WriteAheadLogger {
-    pub fn list_latest() -> Result<String, ()> {
+    pub fn list_latest() -> Result<String, Box<dyn std::error::Error>> {
         let file_path = &Config::global().directory.wal;
 
         let mut entries = fs::read_dir(file_path)
-            .map_err(|_| ())?
+            .map_err(|_| LsmError::Wal("Not able to open dir".to_owned()))?
             .filter(|d| d.as_ref().unwrap().file_name() != ".gitkeep")
             .collect::<Result<Vec<_>, _>>()
-            .unwrap();
+            .map_err(|_| LsmError::Wal("Unable to create Result Vector".to_owned()))?;
 
         entries.sort_by_key(|e| e.file_name());
 
-        let entry = entries.last().ok_or(())?;
+        let entry = entries.last().ok_or(LsmError::Wal(
+            "Unable to load last entry in WAL directory".to_owned(),
+        ))?;
 
         info!("{:?}", entry.file_name());
 
         Ok(entry
             .path()
             .file_stem()
-            .ok_or(())?
+            .ok_or(LsmError::Wal(
+                "Unable to get the file name from the directory entry".to_owned(),
+            ))?
             .to_string_lossy()
             .to_string())
     }

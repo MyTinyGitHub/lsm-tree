@@ -25,4 +25,8 @@ impl MemTable {
     pub fn len(&self) -> usize {
         self.tree.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.tree.is_empty()
+    }
 }

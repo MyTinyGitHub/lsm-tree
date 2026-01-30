@@ -6,7 +6,7 @@ use crate::{
     structures::{
         cache::Cache,
         compaction_manager::CompactionManager,
-        manifest::{self, Manifest},
+        manifest::Manifest,
         memtable::MemTable,
         ss_table_manager::SSTableManager,
         write_ahead_logger::{self, Operations, WriteAheadLogger},

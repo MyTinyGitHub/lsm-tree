@@ -10,7 +10,7 @@ use log::trace;
 use crate::{
     config::Config,
     structures::{
-        cache::{self, Cache, IndexRecord},
+        cache::{Cache, IndexRecord},
         manifest::Manifest,
         memtable::MemTable,
         ss_table_manager::{SSTableFooter, SSTableManager},
@@ -31,6 +31,7 @@ impl CompactionManager {
     pub async fn monitor(&self) {
         loop {
             self.monitor_l0();
+            self.monitor_l1();
             tokio::time::sleep(Duration::from_secs(30)).await;
         }
     }
@@ -44,6 +45,21 @@ impl CompactionManager {
             .len();
 
         if ss_table_count >= Config::global().ss_table.l0_file_count_limit {
+            self.compact(0);
+        } else {
+            trace!("nothing to do for compaction")
+        }
+    }
+
+    pub fn monitor_l1(&self) {
+        let ss_table_count = self
+            .manifest
+            .read()
+            .expect("Unable to aquire read lock")
+            .ss_tables_in_level(0)
+            .len();
+
+        if ss_table_count >= Config::global().ss_table.l1_file_size_upper_limit {
             self.compact(0);
         } else {
             trace!("nothing to do for compaction")

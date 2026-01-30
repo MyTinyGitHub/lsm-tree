@@ -1,8 +1,8 @@
 use log::info;
-use log4rs::append::file;
 use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
+use crate::error::LsmError;
 use crate::structures::cache::IndexRecord;
 use crate::structures::manifest::{Manifest, SSTableBasicInfo};
 use crate::structures::{cache::Cache, memtable::MemTable};
@@ -12,9 +12,7 @@ use std::io::prelude::*;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug)]
-pub struct SSTableManager {
-    manifest: Arc<RwLock<Manifest>>,
-}
+pub struct SSTableManager {}
 
 #[derive(Serialize, Deserialize)]
 pub struct SSTableFooter {
@@ -25,10 +23,6 @@ pub struct SSTableFooter {
 }
 
 impl SSTableManager {
-    pub fn new(manifest: Arc<RwLock<Manifest>>) -> Self {
-        Self { manifest }
-    }
-
     pub fn read_from_file(
         file_name: &str,
         index_record: &IndexRecord,
@@ -53,7 +47,7 @@ impl SSTableManager {
         cache: Arc<RwLock<Cache>>,
         manifest: Arc<RwLock<Manifest>>,
         level: usize,
-    ) -> Result<(), ()> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let (file_name, id) = manifest.write().unwrap().create_filename(level);
 
         info!("writing to a file {}", file_name);
@@ -64,7 +58,7 @@ impl SSTableManager {
             .create(true)
             .open(&file_name)
             .ok()
-            .ok_or(())?;
+            .ok_or(LsmError::SsTable("Unable to open file".to_owned()))?;
 
         info!("updating cache with a file {} ", file_name);
 

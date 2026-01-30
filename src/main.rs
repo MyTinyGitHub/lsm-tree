@@ -1,4 +1,4 @@
-use std::{io, time::Duration};
+use std::io;
 
 use crate::{config::Config, error::Result, structures::lsm::Lsm};
 use log::info;
@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
             }
             "delete" => {
                 let key = get_input("Enter a key: ");
-                lsm.delete(&key);
+                let _ = lsm.delete(&key);
             }
             "exit" => break,
             _ => continue,
