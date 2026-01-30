@@ -1,5 +1,20 @@
 {
   "version": 1,
-  "next_id": 1,
-  "mem_tables": []
+  "next_id": 4,
+  "ss_tables": [
+    {
+      "id": 2,
+      "path": "data/ss_tables/L0_0000000003.sst",
+      "level": 0,
+      "min_key": "",
+      "max_key": ""
+    },
+    {
+      "id": 3,
+      "path": "data/ss_tables/L1_0000000004.sst",
+      "level": 1,
+      "min_key": "",
+      "max_key": ""
+    }
+  ]
 }

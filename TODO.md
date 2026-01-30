@@ -1,10 +1,7 @@
 # Todos
 
 [x] Write values in Bytes.
-[ ] Merging SSTables
-
-- Add Layers to tables L0 -> most recent, L1, L2, L3 etc
-- During compaction increase layer
+[-] Merging SSTables
 [ ] Better error handling
 [ ] Adding multiple tests
 

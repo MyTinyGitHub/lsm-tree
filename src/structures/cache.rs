@@ -124,6 +124,11 @@ impl Cache {
         self.indexes.insert(file_name.to_string(), index_vector);
     }
 
+    pub fn delete(&mut self, file_name: &str) {
+        self.bloom_filters.remove(file_name);
+        self.indexes.remove(file_name);
+    }
+
     pub fn get(&self, key: &str) -> Vec<&str> {
         self.bloom_filters
             .iter()
@@ -132,17 +137,17 @@ impl Cache {
             .collect::<Vec<&str>>()
     }
 
-    pub fn seek_position(&self, file_name: &str, key: &str) -> Option<(u64, u64)> {
+    pub fn seek_position(&self, file_name: &str, key: &str) -> Option<&IndexRecord> {
         info!(
             "looking for seek position for filename {} and key {}",
             file_name, key
         );
 
         let file_indexes = self.indexes.get(file_name)?;
-        for index in file_indexes {
+        for index in file_indexes.iter() {
             if index.start.as_str() <= key && index.end.as_str() >= key {
                 info!("seek location found at {:?}", index);
-                return Some((index.offset, index.size));
+                return Some(index);
             }
         }
         info!(

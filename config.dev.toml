@@ -2,7 +2,7 @@
 version = 1
 
 [memtable]
-max_entries = 10
+max_entries = 5
 
 [directory]
 wal = "data/wals"
@@ -15,3 +15,5 @@ bloom_filter_size = 50
 
 [ss_table]
 manifest_location = "./manifest.json"
+l0_file_count_limit = 3
+l1_file_size_upper_limit = 1000

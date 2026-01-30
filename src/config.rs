@@ -20,6 +20,8 @@ pub struct MemTableConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct SSTableConfig {
     pub manifest_location: String,
+    pub l0_file_count_limit: usize,
+    pub l1_file_size_upper_limit: usize,
 }
 
 #[derive(Debug, Deserialize, Clone)]

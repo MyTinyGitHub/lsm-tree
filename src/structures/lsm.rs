@@ -5,9 +5,10 @@ use crate::{
     error::{LsmError, Result},
     structures::{
         cache::Cache,
-        manifest::Manifest,
+        compaction_manager::CompactionManager,
+        manifest::{self, Manifest},
         memtable::MemTable,
-        ss_table_manager::{self, SSTableManager},
+        ss_table_manager::SSTableManager,
         write_ahead_logger::{self, Operations, WriteAheadLogger},
     },
 };
@@ -19,19 +20,27 @@ pub struct Lsm {
     memtable: Option<MemTable>,
     immutable_memtable: Option<Arc<MemTable>>,
     cache: Arc<RwLock<Cache>>,
-    ss_table_manager: Arc<RwLock<SSTableManager>>,
+    manifest: Arc<RwLock<Manifest>>,
 }
 
 impl Default for Lsm {
     fn default() -> Self {
         let memtable = WriteAheadLogger::read_from_file();
         let manifest = Arc::new(RwLock::new(Manifest::new()));
+        let cache = Arc::new(RwLock::new(Cache::new()));
+
+        let cache_for_move = Arc::clone(&cache);
+        let manifest_for_move = Arc::clone(&manifest);
+        tokio::spawn(async move {
+            let compaction_manager = CompactionManager::new(manifest_for_move, cache_for_move);
+            compaction_manager.monitor().await;
+        });
 
         Self {
             memtable: Some(memtable),
             immutable_memtable: None,
-            cache: Arc::new(RwLock::new(Cache::new())),
-            ss_table_manager: Arc::new(RwLock::new(SSTableManager::new(Arc::clone(&manifest)))),
+            cache,
+            manifest,
         }
     }
 }
@@ -54,9 +63,9 @@ impl Lsm {
 
             let mem = Arc::clone(self.immutable_memtable.as_ref().unwrap());
             let cache = Arc::clone(&self.cache);
-            let manager = Arc::clone(&self.ss_table_manager);
+            let manifest = Arc::clone(&self.manifest);
             tokio::task::spawn_blocking(move || {
-                Lsm::persist_immutable_memtable(mem, cache, manager)
+                Lsm::persist_immutable_memtable(mem, cache, manifest)
             });
         }
 
@@ -103,10 +112,10 @@ impl Lsm {
 
             let seek = cache.seek_position(file_name, key)?;
 
-            self.ss_table_manager
-                .read()
-                .expect("Something went teribly wrong")
-                .read_from_file(file_name, key, seek)
+            SSTableManager::read_from_file(file_name, seek)
+                .into_iter()
+                .find(|(k, _)| k == key)
+                .and_then(|(_, v)| v.clone())
         })
     }
 
@@ -138,12 +147,9 @@ impl Lsm {
     fn persist_immutable_memtable(
         memtable: Arc<MemTable>,
         cache: Arc<RwLock<Cache>>,
-        manager: Arc<RwLock<SSTableManager>>,
+        manifest: Arc<RwLock<Manifest>>,
     ) -> Result<()> {
-        manager
-            .read()
-            .expect("Somethink went wrong unable to get read lock")
-            .persist(memtable, cache)
+        SSTableManager::persist(memtable, cache, manifest, 0)
             .map_err(|_| LsmError::SsTable("Failed to persist SSTable".to_string()))?;
 
         Ok(())
