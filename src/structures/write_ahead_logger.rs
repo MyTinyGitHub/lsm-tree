@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::structures::memtable::MemTable;
 use log::{error, info};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -10,10 +11,19 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[derive(Debug)]
 pub struct WriteAheadLogger {}
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Operations {
     Put,
     Delete,
+}
+
+#[derive(Serialize, Deserialize)]
+struct WALRecord {
+    version: usize,
+    checksum: String,
+    operation: Operations,
+    key: String,
+    value: String,
 }
 
 static WAL_INDEX: AtomicUsize = AtomicUsize::new(0);
@@ -94,36 +104,25 @@ impl WriteAheadLogger {
 
         let mut tree = MemTable::default();
 
-        data.split("\n")
-            .take_while(|v| !v.is_empty())
-            .for_each(|v| {
-                let split = v.split("~").collect::<Vec<&str>>();
+        data.split("|").take_while(|v| !v.is_empty()).for_each(|v| {
+            let wal_record: WALRecord = bincode::deserialize(v.as_bytes()).unwrap();
 
-                let _ = split[0];
-                let checksum = split[1];
-                let Ok(operation) = Operations::from_str(split[2]) else {
-                    error!("Corrupted WAL Unable to read operation");
-                    return;
-                };
-                let key = split[3];
-                let value = split[4];
+            let calc_checksum = md5::compute(format!("{}{}", wal_record.key, wal_record.value));
 
-                let calc_checksum = md5::compute(format!("{}~{}~", key, value));
+            if format!("{:x}", calc_checksum) != wal_record.checksum {
+                error!("Corrupted WAL Record mismatched checksum");
+                return;
+            }
 
-                if format!("{:x}", calc_checksum) != checksum {
-                    error!("Corrupted WAL Record mismatched checksum");
-                    return;
+            match wal_record.operation {
+                Operations::Put => {
+                    tree.add(&wal_record.key, &wal_record.value);
                 }
-
-                match operation {
-                    Operations::Put => {
-                        tree.add(split[3], split[4]);
-                    }
-                    Operations::Delete => {
-                        tree.delete(split[3]);
-                    }
-                };
-            });
+                Operations::Delete => {
+                    tree.delete(&wal_record.key);
+                }
+            };
+        });
 
         tree
     }
@@ -147,24 +146,19 @@ impl WriteAheadLogger {
 
         info!("file {} openned", &file_name);
 
-        let version_formatted = format!("v{}~", Config::global().wal.version);
-        let operation_formatted = format!("{}~", operation_value(&operation));
-        let formatted_key = format!("{}~", key);
+        let checksum = md5::compute(format!("{}{}", key, value));
 
-        let formatted_value = match &operation {
-            Operations::Put => format!("{}~", value),
-            Operations::Delete => "~".to_owned(),
+        let wal_record = WALRecord {
+            version: Config::global().wal.version,
+            checksum: format!("{:x}", checksum),
+            operation,
+            key: key.to_string(),
+            value: value.to_string(),
         };
 
-        let checksum = md5::compute(format!("{}{}", formatted_key, formatted_value));
-
-        file.write_all(version_formatted.as_bytes()).ok()?;
-        file.write_all(format!("{:x}", checksum).as_bytes()).ok()?;
-        file.write_all(b"~").ok()?;
-        file.write_all(operation_formatted.as_ref()).ok()?;
-        file.write_all(formatted_key.as_bytes()).ok()?;
-        file.write_all(formatted_value.as_bytes()).ok()?;
-        file.write_all("\n".as_bytes()).ok()?;
+        let bytes = bincode::serialize(&wal_record).expect("Unable to serialize WALRecord");
+        file.write_all(&bytes).ok()?;
+        file.write_all(b"|").ok()?;
 
         Some(true)
     }

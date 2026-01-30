@@ -21,14 +21,6 @@ impl Default for BloomFilter {
 }
 
 impl BloomFilter {
-    pub fn persist_value(&self) -> String {
-        self.value
-            .iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join(",")
-    }
-
     pub fn update(&mut self, value: &str) {
         info!("updating the bloomfilter with key {}", value);
 

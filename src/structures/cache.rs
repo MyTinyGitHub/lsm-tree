@@ -24,19 +24,6 @@ pub struct IndexRecord {
     pub size: u64,
 }
 
-impl IndexRecord {
-    fn from_string(input: &str) -> Self {
-        let parts = input.split("~").collect::<Vec<_>>();
-        info!("{:?}", parts);
-        Self {
-            start: parts[0].to_owned(),
-            end: parts[1].to_owned(),
-            offset: parts[2].parse().expect("Unable to parse offset"),
-            size: parts[3].parse().expect("Unable to parse size"),
-        }
-    }
-}
-
 impl Cache {
     pub fn new() -> Self {
         let mut res = Self::default();
