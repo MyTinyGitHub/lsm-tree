@@ -1,5 +1,6 @@
 use std::{fs, sync::OnceLock};
 
+use log::info;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -35,28 +36,26 @@ pub struct Directories {
 
 pub static CONFIG: OnceLock<Config> = OnceLock::new();
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            wal: WALConfig { version: 1 },
-            memtable: MemTableConfig { max_entries: 5 },
-            directory: Directories {
-                log: "log/config/log4rs.yaml".to_owned(),
-                wal: "data/wals/".to_owned(),
-                ss_table: "data/ss_tables/".to_owned(),
-            },
-            cache: CacheConfig {
-                index_size: 5,
-                bloom_filter_size: 50,
-            },
-        }
-    }
-}
-
 impl Config {
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
         let env = std::env::var("ENV").unwrap_or_else(|_| "dev".to_owned());
+
+        info!("Loading {} configuration environment", env);
+
         let file_name = format!("config.{}.toml", env);
+
+        let content = fs::read_to_string(file_name)?;
+        let config: Config = toml::from_str(&content)?;
+
+        let _ = fs::create_dir_all(&config.directory.wal);
+        let _ = fs::create_dir_all(&config.directory.ss_table);
+
+        Ok(config)
+    }
+
+    pub fn load_test() -> Result<Self, Box<dyn std::error::Error>> {
+        info!("Loading test configuration environment");
+        let file_name = "config.test.toml".to_owned();
 
         let content = fs::read_to_string(file_name)?;
         let config: Config = toml::from_str(&content)?;
@@ -69,5 +68,10 @@ impl Config {
 
     pub fn global() -> &'static Config {
         CONFIG.get_or_init(|| Self::load().expect("Failed to load config"))
+    }
+
+    pub fn test() -> &'static Config {
+        info!("Loading test configurations");
+        CONFIG.get_or_init(|| Self::load_test().expect("Failed to load config"))
     }
 }

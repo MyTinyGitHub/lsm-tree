@@ -13,11 +13,23 @@ use crate::{
 
 use log::info;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Lsm {
     memtable: Option<MemTable>,
     immutable_memtable: Option<Arc<MemTable>>,
     key_cache: Arc<RwLock<Cache>>,
+}
+
+impl Default for Lsm {
+    fn default() -> Self {
+        let memtable = WriteAheadLogger::read_from_file();
+
+        Self {
+            memtable: Some(memtable),
+            immutable_memtable: None,
+            key_cache: Arc::new(RwLock::new(Cache::new())),
+        }
+    }
 }
 
 impl Lsm {
