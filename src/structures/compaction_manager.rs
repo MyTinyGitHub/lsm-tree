@@ -102,7 +102,7 @@ impl CompactionManager {
             }
 
             let key1 = &values1[index1].0;
-            let key2 = &values2[index1].0;
+            let key2 = &values2[index2].0;
 
             if key1 <= key2 {
                 self.add_to_mem_table(&mut result, &values1[index1]);

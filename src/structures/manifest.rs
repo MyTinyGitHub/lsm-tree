@@ -55,7 +55,7 @@ impl Manifest {
             "{}/L{}_{:010}.sst",
             Config::global().directory.ss_table,
             level,
-            self.next_id
+            id
         );
 
         (path, id)
