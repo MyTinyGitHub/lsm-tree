@@ -94,8 +94,6 @@ impl Lsm {
 
         info!("key {} not found in memtable or immutable_memtable", key);
 
-        //ss_table_manager.retrieve(key);
-
         let cache = self.cache.read().unwrap();
         let mut files = cache.get(key).clone();
 
