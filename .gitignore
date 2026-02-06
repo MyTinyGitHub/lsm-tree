@@ -1,5 +1,5 @@
-*target/
+target/
 *data/
-*log/
+log/
 Cargo.lock
 manifest.json
