@@ -56,11 +56,11 @@ impl CompactionManager {
             .manifest
             .read()
             .expect("Unable to aquire read lock")
-            .ss_tables_in_level(0)
+            .ss_tables_in_level(1)
             .len();
 
         if ss_table_count >= Config::global().ss_table.l1_file_size_upper_limit {
-            self.compact(0);
+            self.compact(1);
         } else {
             trace!("nothing to do for compaction")
         }
@@ -74,7 +74,7 @@ impl CompactionManager {
             .manifest
             .write()
             .expect("Unable to aquire read lock")
-            .compaction_nominees(0);
+            .compaction_nominees(level);
 
         trace!("compaction nominees are {:?} ", ss_tables);
 
