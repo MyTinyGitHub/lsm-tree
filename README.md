@@ -1,51 +1,32 @@
 # LSM-Tree Storage Engine
 
-A from-scratch implementation of a Log-Structured Merge-tree storage engine in Rust, built to deeply understand the internals of how databases like RocksDB, LevelDB, and Cassandra store data. This project forms the storage layer of a larger [distributed SQL database engine](../distributed-db) currently in development.
+A from-scratch implementation of a Log-Structured Merge-tree storage engine in Rust, built to deeply understand the internals of how databases like RocksDB, LevelDB, and Cassandra store data.
 
-## Core Features
+## Why I Built This
 
-- **Write-Ahead Log (WAL)**: Durability layer ensuring crash recovery with automatic WAL replay on startup
-- **Leveled Compaction**: Background compaction strategy optimizing read performance and space amplification
-- **Bloom Filters**: Per-SSTable probabilistic filters eliminating unnecessary disk reads for missing keys
-- **Multi-level Caching**: Index and Bloom filter caching reducing disk I/O on hot paths
-- **Async Compaction**: Non-blocking background compaction via Tokio, keeping writes unblocked
-- **Tombstone Deletions**: Marker-based deletion for consistency across compaction boundaries
-- **Environment Config**: TOML-based configuration for dev/test/prod environments
+I'm building a [distributed SQL database engine](../distributed-db) in Rust, and before writing a single line of the database itself I wanted to understand how data is actually stored on disk. Using RocksDB or any other off-the-shelf storage engine would have hidden the most interesting part of the problem.
 
-## Quick Start
+So I built one from scratch. Every design decision — which compaction strategy to use, whether to add Bloom filters, how to structure the WAL — I made deliberately, which meant I had to understand the tradeoffs behind each choice. That understanding is what I actually needed before building the database layer on top.
 
-```bash
-# Clone and build
-cargo build --release
-
-# Run the interactive CLI
-cargo run
-
-# Available commands:
-# add     - Add a key-value pair
-# get     - Retrieve a value by key
-# delete  - Delete a key (uses tombstone)
-# print   - Print current tree state
-# exit    - Exit the program
-```
+This project is the storage backend for each partition node in the [distributed SQL database](../distributed-db).
 
 ## Design Decisions & Tradeoffs
 
-Every LSM-tree implementation is a balancing act between three competing pressures: **write amplification**, **read amplification**, and **space amplification**. Improving one typically hurts another. Here's how the key decisions in this implementation navigate those tradeoffs.
+Every LSM-tree implementation is a balancing act between three competing pressures: **write amplification**, **read amplification**, and **space amplification**. Improving one typically hurts another. Here's how I navigated those tradeoffs.
 
 ### Leveled Compaction over Tiered (STCS)
 
-Leveled compaction was chosen over Size-Tiered Compaction Strategy (STCS). In leveled compaction, each level has a size limit and SSTables within a level have non-overlapping key ranges, meaning a read needs to check at most one SSTable per level.
+I chose leveled compaction over Size-Tiered Compaction Strategy (STCS). In leveled compaction, each level has a size limit and SSTables within a level have non-overlapping key ranges, meaning a read needs to check at most one SSTable per level.
 
 **Tradeoff accepted:** Leveled compaction produces higher write amplification than STCS — data is rewritten more frequently as it moves between levels. This is the same tradeoff RocksDB and LevelDB make, prioritizing read performance and space efficiency over raw write throughput.
 
-STCS would have been faster for write-heavy workloads but would result in more SSTables overlapping in key range, requiring more files to be checked per read.
+STCS would have been faster for write-heavy workloads but results in more SSTables overlapping in key range, requiring more files to be checked per read.
 
 ### Bloom Filters per SSTable
 
-Each SSTable has an associated Bloom filter. Before doing any disk I/O for a read, the filter is checked — if it reports the key is absent, the SSTable is skipped entirely.
+Each SSTable has an associated Bloom filter. Before doing any disk I/O for a read, I check the filter first — if it reports the key is absent, the SSTable is skipped entirely.
 
-**Tradeoff accepted:** Bloom filters consume memory and have a configurable false positive rate — occasionally they'll indicate a key *might* exist when it doesn't, causing an unnecessary disk read. The false positive rate is tunable via configuration. In practice this is a clear win: the cost of the occasional false positive is far lower than the cost of checking every SSTable for every read.
+**Tradeoff accepted:** Bloom filters consume memory and have a configurable false positive rate — occasionally they'll indicate a key might exist when it doesn't, causing an unnecessary disk read. In practice this is a clear win: the cost of the occasional false positive is far lower than the cost of checking every SSTable on every read. The false positive rate is tunable via configuration.
 
 This is the same approach used by RocksDB and Cassandra.
 
@@ -57,11 +38,9 @@ Every write is appended to the WAL before the memtable is modified. On crash rec
 
 ### XXHash3 for Hashing
 
-XXHash3 was chosen over alternatives like MD5, SHA, or FNV for Bloom filter hashing and data integrity checks.
+I chose XXHash3 over alternatives like MD5, SHA, or FNV for Bloom filter hashing and data integrity checks.
 
-**Why:** XXHash3 is one of the fastest non-cryptographic hash functions available, with excellent distribution properties. Cryptographic hashes (MD5, SHA) are unnecessarily expensive for this use case — collision resistance at a cryptographic level is not required for Bloom filters or integrity checks within a trusted storage engine.
-
----
+**Why:** XXHash3 is one of the fastest non-cryptographic hash functions available, with excellent distribution properties. Cryptographic hashes are unnecessarily expensive here — collision resistance at a cryptographic level is not required for Bloom filters or integrity checks within a trusted storage engine.
 
 ## Architecture
 
@@ -90,6 +69,22 @@ Read Path:
 - **Compaction Manager** — Background async process that merges and rewrites SSTables according to the leveled compaction strategy.
 - **Manifest** — Tracks metadata about all SSTables and their level assignments.
 
+## Quick Start
+
+```bash
+cargo build --release
+
+# Run the interactive CLI
+cargo run
+
+# Available commands:
+# add     - Add a key-value pair
+# get     - Retrieve a value by key
+# delete  - Delete a key (uses tombstone)
+# print   - Print current tree state
+# exit    - Exit the program
+```
+
 ## Configuration
 
 ```toml
@@ -110,14 +105,9 @@ Configuration files: `config.dev.toml`, `config.test.toml`, `config.prod.toml`
 ## Testing
 
 ```bash
-# Run all tests
 cargo test
-
-# Run with logging
-RUST_LOG=info cargo test
-
-# Run specific test
-cargo test test_recreating
+RUST_LOG=info cargo test   # with logging
+cargo test test_recreating # specific test
 ```
 
 The test suite covers crash recovery scenarios, data consistency guarantees, compaction behavior, and CRUD operations.
@@ -149,31 +139,8 @@ src/
 - `log4rs` — Structured logging
 - `thiserror` — Error handling
 
-## CLI Example
-
-```
-$ cargo run
-application is starting
-Enter what to do: add
-Enter key: user:1
-Enter value: Alice
-Enter what to do: add
-Enter key: user:2
-Enter value: Bob
-Enter what to do: get
-Enter a key: user:1
-"Some(\"Alice\")"
-Enter what to do: delete
-Enter a key: user:2
-Enter what to do: get
-Enter a key: user:2
-Key is not present!
-Enter what to do: exit
-```
-
 ## What I Learned
 
-Building this made the abstract tradeoffs in storage engine design concrete. The decision between leveled and tiered compaction stopped being a theoretical choice once I could see the difference in how many SSTables accumulated and how reads performed at each level. The Bloom filter false positive rate became tangible when tuning it against memory usage. Fighting Rust's borrow checker throughout forced a much deeper understanding of ownership and concurrency than any higher-level language would have required.
+Building this made the abstract tradeoffs in storage engine design concrete. The decision between leveled and tiered compaction stopped being theoretical once I could see the difference in how many SSTables accumulated and how reads performed at each level. The Bloom filter false positive rate became tangible when tuning it against memory usage. Fighting Rust's borrow checker throughout forced a much deeper understanding of ownership and concurrency than any higher-level language would have required.
 
 This project directly informs the storage layer of the [distributed SQL database engine](../distributed-db) — the same LSM internals, now serving as the per-partition storage backend in a distributed system.
-
